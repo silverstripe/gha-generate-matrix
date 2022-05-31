@@ -1,0 +1,75 @@
+name: Generate Matrix
+description: GitHub Action to create a dynamic Silverstripe CI matrix
+inputs:
+  # extra jobs must be multi-line string, as there's no support for type: array for inputs
+  extra_jobs:
+    type: string
+    required: false
+    default: ''
+  # simple matrix will only run a single php 7.4 mysql 5.7 job instead of a full matrix
+  simple_matrix:
+    type: boolean
+    default: false
+  endtoend:
+    type: boolean
+    default: true
+  phpcoverage:
+    type: boolean
+    # modules on silverstripe account will ignore this and always run codecov
+    default: false
+  phplinting:
+    type: boolean
+    default: true
+  phpunit:
+    type: boolean
+    default: true
+  js:
+    type: boolean
+    default: true
+# https://docs.github.com/en/actions/creating-actions/metadata-syntax-for-github-actions
+outputs:
+  matrix:
+    description: JSON matrix
+    value: ${{ steps.php-script.outputs.matrix }}
+runs:
+  using: composite
+  steps:
+    - name: Checkout code
+      uses: actions/checkout@ec3a7ce113134d7a93b817d10a8272cb61118579 #v2
+    - name: Install PHP
+      uses: shivammathur/setup-php@aa1fe473f9c687b6fb896056d771232c0bc41161 #v2
+      with:
+        php-version: '7.4'
+        extensions: yaml
+    - name: Create __inputs.yml
+      shell: bash
+      # Add string inputs to memory instead of using string substituion in shell script
+      # https://docs.github.com/en/actions/security-guides/security-hardening-for-github-actions#using-an-intermediate-environment-variable
+      env:
+        EXTRA_JOBS: ${{ inputs.extra_jobs }}
+        GITHUB_REPOSITORY: ${{ github.repository }}
+        # github.base_ref is the target branch on a pull-request
+        # github.ref_name is the name of the branch on push, and the tag on tag
+        GITHUB_MY_REF: ${{ github.base_ref && github.base_ref || github.ref_name }}
+      run: |
+        if [ -f __inputs.yml ]; then rm __inputs.yml; fi
+        touch __inputs.yml
+        echo "endtoend: ${{ inputs.endtoend }}" >> __inputs.yml
+        echo "js: ${{ inputs.js }}" >> __inputs.yml
+        echo "phpcoverage: ${{ inputs.phpcoverage }}" >> __inputs.yml
+        echo "phplinting: ${{ inputs.phplinting }}" >> __inputs.yml
+        echo "phpunit: ${{ inputs.phpunit }}" >> __inputs.yml
+        echo "simple_matrix: ${{ inputs.simple_matrix }}" >> __inputs.yml
+        echo "github_repository: $GITHUB_REPOSITORY" >> __inputs.yml
+        echo "github_my_ref: $GITHUB_MY_REF" >> __inputs.yml
+        if [[ "$EXTRA_JOBS" != "" ]]; then echo "extra_jobs:" >> __inputs.yml; fi
+        if [[ "$EXTRA_JOBS" != "" ]]; then echo "$EXTRA_JOBS" >> __inputs.yml; fi
+        echo "cat __inputs.yml"
+        cat __inputs.yml
+    - name: Run php script
+      id: php-script
+      shell: bash
+      run: |
+        MATRIX_JSON=$(php ${{ github.action_path }}/script.php)
+        echo "MATRIX_JSON: $MATRIX_JSON"
+        echo "::set-output name=matrix::${MATRIX_JSON}"
