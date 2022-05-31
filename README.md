@@ -2,4 +2,4 @@
 
 Create a dynamic Silverstripe CI matrix
 
-See [gha-ci](https://github.com/silverstripe/gha-ci)
+Only intended to be used within [gha-ci](https://github.com/silverstripe/gha-ci). See that repository for details on inputs.

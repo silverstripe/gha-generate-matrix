@@ -1,0 +1,12 @@
+name: Auto-tag
+on:
+  push:
+    tags:
+      - '*.*.*'
+jobs:
+  auto-tag:
+    name: Auto-tag
+    runs-on: ubuntu-latest
+    steps:
+      - name: Auto-tag
+        uses: silverstripe/gha-auto-tag@main
