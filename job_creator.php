@@ -107,8 +107,11 @@ class JobCreator
 
     private function doRunPhpCoverage(array $run, string $githubRepository): bool
     {
-        // always run on silverstripe account
-        return $run['phpcoverage'] || preg_match('#^silverstripe/#', $githubRepository);
+        // always run on silverstripe account, unless phpcoverage_force_off is set to true
+        if (preg_match('#^silverstripe/#', $githubRepository)) {
+            return !$run['phpcoverage_force_off'];
+        }
+        return $run['phpcoverage'];
     }
 
     private function buildDynamicMatrix(
@@ -192,7 +195,14 @@ class JobCreator
         $dynamicMatrix = true;
         $simpleMatrix = false;
         foreach ($inputs as $input => $value) {
-            if (in_array($input, ['endtoend', 'js', 'phpunit', 'phpcoverage', 'phplinting'])) {
+            if (in_array($input, [
+                'endtoend',
+                'js',
+                'phpunit',
+                'phpcoverage',
+                'phpcoverage_force_off',
+                'phplinting',
+            ])) {
                 $run[$input] = $this->parseBoolValue($value);
             } else if ($input === 'extra_jobs') {
                 if ($value === 'none') {

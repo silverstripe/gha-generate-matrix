@@ -14,9 +14,15 @@ inputs:
   endtoend:
     type: boolean
     default: true
+  # this option is intended only for community modules
+  # modules on silverstripe account will ignore this value and always run codecov
   phpcoverage:
     type: boolean
-    # modules on silverstripe account will ignore this and always run codecov
+    default: false
+  # this option is specifically for turning off codecov on modules on the silverstripe account
+  # use this if there are something like segfaults during a codecov run
+  phpcoverage_force_off:
+    type: boolean
     default: false
   phplinting:
     type: boolean
