@@ -13,23 +13,30 @@ class JobCreator
         if (in_array($repo, NO_INSTALLER_REPOS)) {
             return '';
         }
-        // e.g. ['4', '11']
-        $portions = explode('.', $branch);
-        if (count($portions) == 1) {
-            return '4.x-dev';
+        // e.g. pulls/4.10/some-bugfix or pulls/4/some-feature
+        // for push events to the creative-commoners account
+        if (preg_match('#^pulls/([0-9\.]+)/#', $branch, $matches)) {
+            $branch = $matches[1];
         }
-        if (in_array($repo, LOCKSTEPED_REPOS)) {
-            return '4.' . $portions[1] . '.x-dev';
-        } else {
-            // use the latest minor version of installer
-            $installerVersions = array_keys(INSTALLER_TO_PHP_VERSIONS);
-            // remove '4' version
-            $installerVersions = array_diff($installerVersions, ['4']);
-            // get the minor portions of the verisons e.g. [9, 10, 11]
-            $minorPortions = array_map(fn($portions) => (int) explode('.', $portions)[1], $installerVersions);
-            sort($minorPortions);
-            return '4.' . $minorPortions[count($minorPortions) - 1] . '.x-dev';
+        // e.g. 4.10-release
+        $branch = preg_replace('#^([0-9\.]+)-release$#', '$1', $branch);
+        if (in_array($repo, LOCKSTEPED_REPOS) && is_numeric($branch)) {
+            // e.g. ['4', '11']
+            $portions = explode('.', $branch);
+            if (count($portions) == 1) {
+                return '4.x-dev';
+            } else {
+                return '4.' . $portions[1] . '.x-dev';
+            }
         }
+        // use the latest minor version of installer
+        $installerVersions = array_keys(INSTALLER_TO_PHP_VERSIONS);
+        // remove '4' version
+        $installerVersions = array_diff($installerVersions, ['4']);
+        // get the minor portions of the verisons e.g. [9, 10, 11]
+        $minorPortions = array_map(fn($portions) => (int) explode('.', $portions)[1], $installerVersions);
+        sort($minorPortions);
+        return '4.' . $minorPortions[count($minorPortions) - 1] . '.x-dev';
     }
     
     public function createJob(int $phpIndex, array $opts): array
@@ -180,8 +187,28 @@ class JobCreator
         return $matrix;
     }
 
-    public function createJson(array $inputs): string
+    public function getInputs(string $yml): array
     {
+        $message = 'Failed to parse yml';
+        try {
+            $inputs = yaml_parse($yml);
+        } catch (Exception $e) {
+            throw new Exception($message);
+        }
+        if (!$inputs) {
+            throw new Exception($message);
+        }
+        if (array_key_exists('github_my_ref', $inputs)) {
+            if (!preg_match("#github_my_ref: *'#", $yml)) {
+                throw new Exception('github_my_ref needs to be surrounded by single-quotes');
+            }
+        }
+        return $inputs;
+    }
+
+    public function createJson(string $yml): string
+    {
+        $inputs = $this->getInputs($yml);
         // $myRef will either be a branch for push (i.e cron) and pull-request (target branch), or a semver tag
         $myRef = $inputs['github_my_ref'];
         $isTag = preg_match('#^[0-9]+\.[0-9]+\.[0-9]+$#', $myRef, $m);
