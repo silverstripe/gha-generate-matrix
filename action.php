@@ -4,10 +4,6 @@ include 'consts.php';
 include 'job_creator.php';
 
 // Reads inputs.yml and creates a new json matrix
-$inputs = yaml_parse(file_get_contents('__inputs.yml'));
-if ($inputs === false) {
-    echo 'Unable to parse __inputs.yml';
-    exit(1);
-}
+$yml = file_get_contents('__inputs.yml');
 $jobCreator = new JobCreator();
-echo $jobCreator->createJson($inputs);
+echo $jobCreator->createJson($yml);
