@@ -19,7 +19,7 @@ class JobCreator
             return '4.x-dev';
         }
         if (in_array($repo, LOCKSTEPED_REPOS)) {
-            return '4' . $portions[1] . 'x-dev';
+            return '4.' . $portions[1] . '.x-dev';
         } else {
             // use the latest minor version of installer
             $installerVersions = array_keys(INSTALLER_TO_PHP_VERSIONS);
