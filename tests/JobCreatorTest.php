@@ -69,6 +69,61 @@ class JobCreatorTest extends TestCase
     }
 
     /**
+     * @dataProvider provideParentBranch
+     */
+    public function testParentBranch(string $yml, string $expected)
+    {
+        if (!function_exists('yaml_parse')) {
+            $this->markTestSkipped('yaml extension is not installed');
+        }
+        $creator = new JobCreator();
+        $json = json_decode($creator->createJson($yml));
+        $this->assertSame($expected, $json->include[0]->installer_version);
+    }
+
+    private function getGenericYml(): string
+    {
+        return <<<EOT
+        endtoend: true
+        js: true
+        phpcoverage: false
+        phpcoverage_force_off: false
+        phplinting: true
+        phpunit: true
+        simple_matrix: false
+        EOT;
+    }
+
+    public function provideParentBranch(): array
+    {
+        $latest = $this->getLatestInstallerVersion() . '.x-dev';
+        return [
+            [
+                implode("\n", [
+                    $this->getGenericYml(),
+                    <<<EOT
+                    github_repository: 'myaccount/silverstripe-versioned'
+                    github_my_ref: 'myaccount-patch-1'
+                    parent_branch: '4.10'
+                    EOT
+                ]),
+                '4.10.x-dev'
+            ],
+            [
+                implode("\n", [
+                    $this->getGenericYml(),
+                    <<<EOT
+                    github_repository: 'myaccount/silverstripe-versioned'
+                    github_my_ref: 'myaccount-patch-1'
+                    parent_branch: 'burger'
+                    EOT
+                ]),
+                $latest
+            ],
+        ];
+    }
+
+    /**
      * @dataProvider provideGetInputsValid
      */
     public function testGetInputsValid(string $yml, array $expected)
@@ -85,17 +140,13 @@ class JobCreatorTest extends TestCase
     {
         return [
             [
-                <<<EOT
-                endtoend: true
-                js: true
-                phpcoverage: false
-                phpcoverage_force_off: false
-                phplinting: true
-                phpunit: true
-                simple_matrix: false
-                github_repository: 'myaccount/silverstripe-versioned'
-                github_my_ref: 'pulls/1.10/module-standards'
-                EOT,
+                implode("\n", [
+                    $this->getGenericYml(),
+                    <<<EOT
+                    github_repository: 'myaccount/silverstripe-versioned'
+                    github_my_ref: 'pulls/1.10/module-standards'
+                    EOT
+                ]),
                 [
                     'endtoend' => true,
                     'js' => true,
@@ -134,6 +185,12 @@ class JobCreatorTest extends TestCase
                 github_my_ref: 1.10
                 EOT,
                 'github_my_ref needs to be surrounded by single-quotes'
+            ],
+            [
+                <<<EOT
+                parent_branch: 1.10
+                EOT,
+                'parent_branch needs to be surrounded by single-quotes'
             ],
             // invalid yml
             [
