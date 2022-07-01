@@ -3,6 +3,8 @@
 class JobCreator
 {
     private $installerVersion = null;
+    
+    private $parentBranch = null;
 
     /**
      * Get the correct version of silverstripe/installer to include for the given repository and branch
@@ -20,6 +22,7 @@ class JobCreator
         }
         // e.g. 4.10-release
         $branch = preg_replace('#^([0-9\.]+)-release$#', '$1', $branch);
+        // module is a lockstepped repo
         if (in_array($repo, LOCKSTEPED_REPOS) && is_numeric($branch)) {
             // e.g. ['4', '11']
             $portions = explode('.', $branch);
@@ -28,6 +31,10 @@ class JobCreator
             } else {
                 return '4.' . $portions[1] . '.x-dev';
             }
+        }
+        // use the parent branch
+        if ($this->parentBranch && is_numeric($this->parentBranch)) {
+            return $this->parentBranch . '.x-dev';
         }
         // use the latest minor version of installer
         $installerVersions = array_keys(INSTALLER_TO_PHP_VERSIONS);
@@ -198,9 +205,11 @@ class JobCreator
         if (!$inputs) {
             throw new Exception($message);
         }
-        if (array_key_exists('github_my_ref', $inputs)) {
-            if (!preg_match("#github_my_ref: *'#", $yml)) {
-                throw new Exception('github_my_ref needs to be surrounded by single-quotes');
+        foreach (['github_my_ref', 'parent_branch'] as $key) {
+            if (array_key_exists($key, $inputs)) {
+                if (!preg_match("#$key: *'#", $yml)) {
+                    throw new Exception("$key needs to be surrounded by single-quotes");
+                }
             }
         }
         return $inputs;
@@ -213,6 +222,13 @@ class JobCreator
         $myRef = $inputs['github_my_ref'];
         $isTag = preg_match('#^[0-9]+\.[0-9]+\.[0-9]+$#', $myRef, $m);
         $branch = $isTag ? sprintf('%d.%d', $m[1], $m[2]) : $myRef;
+
+
+        // parent branch is a best attempt to get the parent branch of the branch via bash
+        // it's used for working out the version of installer to use on github push events
+        if (array_key_exists('parent_branch', $inputs)) {
+            $this->parentBranch = $inputs['parent_branch'];
+        }
 
         $githubRepository = $inputs['github_repository'];
         $this->installerVersion = $this->getInstallerVersion($githubRepository, $branch);
@@ -240,7 +256,7 @@ class JobCreator
                 $dynamicMatrix = $this->parseBoolValue($value);
             } else if ($input === 'simple_matrix') {
                 $simpleMatrix = $this->parseBoolValue($value);
-            } else if (in_array($input, ['github_my_ref', 'github_repository'])) {
+            } else if (in_array($input, ['github_my_ref', 'github_repository', 'parent_branch'])) {
                 continue;
             } else {
                 throw new LogicException("Unhandled input $input");
