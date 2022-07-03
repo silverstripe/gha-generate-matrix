@@ -85,7 +85,7 @@ runs:
         echo "simple_matrix: ${{ inputs.simple_matrix }}" >> __inputs.yml
         echo "github_repository: '$GITHUB_REPOSITORY'" >> __inputs.yml
         echo "github_my_ref: '$GITHUB_MY_REF'" >> __inputs.yml
-        echo "parent_branch": '$PARENT_BRANCH'" >> __inputs.yml
+        echo "parent_branch: '$PARENT_BRANCH'" >> __inputs.yml
         if [[ "$EXTRA_JOBS" != "" ]]; then
           echo "extra_jobs:" >> __inputs.yml
           echo "$EXTRA_JOBS" >> __inputs.yml
