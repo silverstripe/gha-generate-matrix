@@ -72,7 +72,8 @@ runs:
         fi
         # e.g. push event to branch called myaccount-patch-1
         # use git history to make a best attempt at getting the parent branch
-        PARENT_BRANCH=$(git show-branch -a 2>/dev/null | grep '\*' | grep -v `git rev-parse --abbrev-ref HEAD` | head -n1 | sed 's/.*\[\(.*\)\].*/\1/' | sed 's/[\^~].*//')
+        # note: { grep * || :; } is to prevent exit code of 1 on zero-match from halting workflow
+        PARENT_BRANCH=$(git show-branch -a 2>/dev/null | { grep '\*' || :; } | { grep -v `git rev-parse --abbrev-ref HEAD` || :; } | head -n1 | sed 's/.*\[\(.*\)\].*/\1/' | sed 's/[\^~].*//')
         # create __inputs.yml
         touch __inputs.yml
         echo "endtoend: ${{ inputs.endtoend }}" >> __inputs.yml
