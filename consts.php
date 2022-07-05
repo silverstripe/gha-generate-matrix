@@ -23,6 +23,12 @@ const INSTALLER_TO_PHP_VERSIONS = [
         '8.0',
         '8.1',
     ],
+    '5.0' => [
+        '8.1',
+    ],
+    '5' => [
+        '8.1',
+    ],
 ];
 
 const DB_MYSQL_57 = 'mysql57';
@@ -31,7 +37,7 @@ const DB_MYSQL_80 = 'mysql80';
 const DB_PGSQL = 'pgsql';
 
 // Used when determining the version of installer to used. Intentionally doesn't include recipes
-const LOCKSTEPED_REPOS = [
+const LOCKSTEPPED_REPOS = [
     'silverstripe-admin',
     'silverstripe-asset-admin',
     'silverstripe-assets',
@@ -48,7 +54,7 @@ const LOCKSTEPED_REPOS = [
 ];
 
 // Repositories that do not require silverstripe/installer to be explicitly added as a dependency for testing
-const NO_INSTALLER_REPOS = [
+const NO_INSTALLER_LOCKSTEPPED_REPOS = [
     // these are/include recipe-cms or recipe-core, so we don't want to composer require installer
     // in .travis.yml they used the 'self' provision rather than 'standard'
     'recipe-authoring-tools',
@@ -63,6 +69,40 @@ const NO_INSTALLER_REPOS = [
     'recipe-reporting-tools',
     'recipe-services',
     'silverstripe-installer',
+];
+
+const NO_INSTALLER_UNLOCKSTEPPED_REPOS = [
     // vendor-plugin is not a recipe, though we also do not want installer
     'vendor-plugin'
+];
+
+const CMS_TO_REPO_MAJOR_VERSIONS = [
+    '4' => [
+        'recipe-authoring-tools' => '1',
+        'recipe-blog' => '1',
+        'recipe-ccl' => '2',
+        'recipe-cms' => '4',
+        'recipe-collaboration' => '1',
+        'recipe-content-blocks' => '2',
+        'recipe-core' => '4',
+        'recipe-form-building' => '1',
+        'recipe-kitchen-sink' => '4',
+        'recipe-reporting-tools' => '1',
+        'recipe-services' => '1',
+        'silverstripe-installer' => '4',
+    ],
+    '5' => [
+        'recipe-authoring-tools' => '2',
+        'recipe-blog' => '2',
+        'recipe-ccl' => '3',
+        'recipe-cms' => '5',
+        'recipe-collaboration' => '2',
+        'recipe-content-blocks' => '3',
+        'recipe-core' => '5',
+        'recipe-form-building' => '2',
+        'recipe-kitchen-sink' => '5',
+        'recipe-reporting-tools' => '2',
+        'recipe-services' => '2',
+        'silverstripe-installer' => '5',
+    ],
 ];
