@@ -2,34 +2,33 @@
 
 class JobCreator
 {
-    private $installerVersion = null;
-    
-    private $parentBranch = null;
+    public string $branch = '';
+
+    public string $githubRepository = '';
+
+    private string $installerVersion = '';
+
+    private string $parentBranch = '';
 
     /**
      * Get the correct version of silverstripe/installer to include for the given repository and branch
      */
-    public function getInstallerVersion(string $githubRepository, string $branch): string
+    public function getInstallerVersion(): string
     {
-        $repo = explode('/', $githubRepository)[1];
-        if (in_array($repo, NO_INSTALLER_REPOS)) {
+        $repo = explode('/', $this->githubRepository)[1];
+        if (in_array($repo, NO_INSTALLER_LOCKSTEPPED_REPOS) || in_array($repo, NO_INSTALLER_UNLOCKSTEPPED_REPOS)) {
             return '';
         }
-        // e.g. pulls/4.10/some-bugfix or pulls/4/some-feature
-        // for push events to the creative-commoners account
-        if (preg_match('#^pulls/([0-9\.]+)/#', $branch, $matches)) {
-            $branch = $matches[1];
-        }
-        // e.g. 4.10-release
-        $branch = preg_replace('#^([0-9\.]+)-release$#', '$1', $branch);
+        $branch = $this->getCleanedBranch();
+        $cmsMajor = $this->getCmsMajorFromBranch();
         // module is a lockstepped repo
-        if (in_array($repo, LOCKSTEPED_REPOS) && is_numeric($branch)) {
+        if (in_array($repo, LOCKSTEPPED_REPOS) && is_numeric($branch)) {
             // e.g. ['4', '11']
             $portions = explode('.', $branch);
             if (count($portions) == 1) {
-                return '4.x-dev';
+                return $cmsMajor . '.x-dev';
             } else {
-                return '4.' . $portions[1] . '.x-dev';
+                return $cmsMajor . '.' . $portions[1] . '.x-dev';
             }
         }
         // use the parent branch
@@ -38,24 +37,22 @@ class JobCreator
         }
         // use the latest minor version of installer
         $installerVersions = array_keys(INSTALLER_TO_PHP_VERSIONS);
-        // remove '4' version
-        $installerVersions = array_diff($installerVersions, ['4']);
+        $installerVersions = array_filter($installerVersions, fn($version) => substr($version, 0, 1) === $cmsMajor);
+        // remove major versions
+        $installerVersions = array_diff($installerVersions, ['4', '5', '6']);
         // get the minor portions of the verisons e.g. [9, 10, 11]
         $minorPortions = array_map(fn($portions) => (int) explode('.', $portions)[1], $installerVersions);
         sort($minorPortions);
-        return '4.' . $minorPortions[count($minorPortions) - 1] . '.x-dev';
+        return $cmsMajor . '.' . $minorPortions[count($minorPortions) - 1] . '.x-dev';
     }
     
     public function createJob(int $phpIndex, array $opts): array
     {
-        $installerKey = str_replace('.x-dev', '', $this->installerVersion);
-        $installerKey = $installerKey ?: '4';
-        $phpVersions = INSTALLER_TO_PHP_VERSIONS[$installerKey];
         $default = [
             # ensure there's a default value for all possible return keys
             # this allows us to use `if [[ "${{ matrix.key }}" == "true" ]]; then` in gha-ci/ci.yml
             'installer_version' => $this->installerVersion,
-            'php' => $phpVersions[$phpIndex] ?? $phpVersions[count($phpVersions) - 1],
+            'php' => $this->getPhpVersion($phpIndex),
             'db' => DB_MYSQL_57,
             'composer_require_extra' => '',
             'composer_args' => '',
@@ -71,8 +68,61 @@ class JobCreator
         ];
         return array_merge($default, $opts);
     }
+
+    private function getPhpVersion(int $phpIndex): string
+    {
+        $key = str_replace('.x-dev', '', $this->installerVersion);
+        $repo = explode('/', $this->githubRepository)[1];
+        if (in_array($repo, NO_INSTALLER_LOCKSTEPPED_REPOS)) {
+            $cmsMajor = $this->getCmsMajorFromBranch();
+            $branch = $this->getCleanedBranch();
+            if (preg_match('#^[1-9]$#', $branch)) {
+                $key = $cmsMajor;
+            } elseif (preg_match('#^[1-9]\.([0-9]+)$#', $branch, $matches)) {
+                $key = sprintf('%d.%d', $cmsMajor, $matches[1]);
+            }
+        }
+        $phpVersions = INSTALLER_TO_PHP_VERSIONS[$key] ?? INSTALLER_TO_PHP_VERSIONS['4'];
+        return $phpVersions[$phpIndex] ?? $phpVersions[count($phpVersions) - 1];
+    }
+
+    private function getCmsMajorFromBranch(): string
+    {
+        $branch = $this->getCleanedBranch();
+        $repo = explode('/', $this->githubRepository)[1];
+        $branchMajor = '';
+        if (preg_match('#^[1-9]$#', $branch)) {
+            $branchMajor = $branch;
+        } elseif (preg_match('#^([1-9])\.[0-9]+$#', $branch, $matches)) {
+            $branchMajor = $matches[1];
+        }
+        foreach (array_keys(CMS_TO_REPO_MAJOR_VERSIONS) as $cmsMajor) {
+            if (isset(CMS_TO_REPO_MAJOR_VERSIONS[$cmsMajor][$repo])) {
+                if (CMS_TO_REPO_MAJOR_VERSIONS[$cmsMajor][$repo] === $branchMajor) {
+                    return $cmsMajor;
+                }
+            }
+        }
+        // For CMS 5 support on pull-requests, will probably need to file_get_contents composer.json to see
+        // the version of framework, or other, required in composer.json
+        // For now, assuming CMS 4 should should be acceptable
+        return '4';
+    }
+
+    private function getCleanedBranch(): string
+    {
+        $branch = $this->branch;
+        // e.g. pulls/4.10/some-bugfix or pulls/4/some-feature
+        // for push events to the creative-commoners account
+        if (preg_match('#^pulls/([0-9\.]+)/#', $branch, $matches)) {
+            $branch = $matches[1];
+        }
+        // e.g. 4.10-release
+        $branch = preg_replace('#^([0-9\.]+)-release$#', '$1', $branch);
+        return $branch;
+    }
     
-    private function parseBoolValue(mixed $value): bool
+    private function parseBoolValue($value): bool
     {
         return ($value === true || $value === 'true');
     }
@@ -81,8 +131,7 @@ class JobCreator
         array $matrix,
         bool $simpleMatrix,
         string $suite,
-        array $run,
-        string $githubRepository
+        array $run
     ): array {
         if ($simpleMatrix) {
             $matrix['include'][] = $this->createJob(0, [
@@ -103,7 +152,7 @@ class JobCreator
             // this same mysql pdo test is also created for the phpcoverage job, so only add it here if
             // not creating a phpcoverage job.
             // note: phpcoverage also runs unit tests
-            if (!$this->doRunPhpCoverage($run, $githubRepository)) {
+            if (!$this->doRunPhpCoverage($run)) {
                 $matrix['include'][] = $this->createJob(2, [
                     'db' => DB_MYSQL_57_PDO,
                     'phpunit' => true,
@@ -119,10 +168,10 @@ class JobCreator
         return $matrix;
     }
 
-    private function doRunPhpCoverage(array $run, string $githubRepository): bool
+    private function doRunPhpCoverage(array $run): bool
     {
         // always run on silverstripe account, unless phpcoverage_force_off is set to true
-        if (preg_match('#^silverstripe/#', $githubRepository)) {
+        if (preg_match('#^silverstripe/#', $this->githubRepository)) {
             return !$run['phpcoverage_force_off'];
         }
         return $run['phpcoverage'];
@@ -131,8 +180,7 @@ class JobCreator
     private function buildDynamicMatrix(
         array $matrix,
         array $run,
-        bool $simpleMatrix,
-        string $githubRepository
+        bool $simpleMatrix
     ): array {
         if ($run['phpunit'] && (file_exists('phpunit.xml') || file_exists('phpunit.xml.dist'))) {
             $dom = new DOMDocument();
@@ -145,21 +193,21 @@ class JobCreator
                     continue;
                 }
                 $suite = $testsuite->getAttribute('name');
-                $matrix = $this->createPhpunitJobs($matrix, $simpleMatrix, $suite, $run, $githubRepository);
+                $matrix = $this->createPhpunitJobs($matrix, $simpleMatrix, $suite, $run);
             }
             // phpunit.xml has no defined testsuites, or only defaults a "Default"
             if (count($matrix['include']) == 0) {
-                $matrix = $this->createPhpunitJobs($matrix, $simpleMatrix, 'all', $run, $githubRepository);
+                $matrix = $this->createPhpunitJobs($matrix, $simpleMatrix, 'all', $run);
             }
         }
         // skip phpcs on silverstripe-installer which include sample file for use in projects
-        if ($run['phplinting'] && (file_exists('phpcs.xml') || file_exists('phpcs.xml.dist')) && !preg_match('#/silverstripe-installer$#', $githubRepository)) {
+        if ($run['phplinting'] && (file_exists('phpcs.xml') || file_exists('phpcs.xml.dist')) && !preg_match('#/silverstripe-installer$#', $this->githubRepository)) {
             $matrix['include'][] = $this->createJob(0, [
                 'phplinting' => true
             ]);
         }
         // phpcoverage also runs unit tests
-        if ($this->doRunPhpCoverage($run, $githubRepository)) {
+        if ($this->doRunPhpCoverage($run, $this->githubRepository)) {
             if ($simpleMatrix) {
                 $matrix['include'][] = $this->createJob(0, [
                     'phpcoverage' => true
@@ -221,8 +269,7 @@ class JobCreator
         // $myRef will either be a branch for push (i.e cron) and pull-request (target branch), or a semver tag
         $myRef = $inputs['github_my_ref'];
         $isTag = preg_match('#^[0-9]+\.[0-9]+\.[0-9]+$#', $myRef, $m);
-        $branch = $isTag ? sprintf('%d.%d', $m[1], $m[2]) : $myRef;
-
+        $this->branch = $isTag ? sprintf('%d.%d', $m[1], $m[2]) : $myRef;
 
         // parent branch is a best attempt to get the parent branch of the branch via bash
         // it's used for working out the version of installer to use on github push events
@@ -230,8 +277,8 @@ class JobCreator
             $this->parentBranch = $inputs['parent_branch'];
         }
 
-        $githubRepository = $inputs['github_repository'];
-        $this->installerVersion = $this->getInstallerVersion($githubRepository, $branch);
+        $this->githubRepository = $inputs['github_repository'];
+        $this->installerVersion = $this->getInstallerVersion();
 
         $run = [];
         $extraJobs = [];
@@ -265,7 +312,7 @@ class JobCreator
         $matrix = ['include' => []];
 
         if ($dynamicMatrix) {
-            $matrix = $this->buildDynamicMatrix($matrix, $run, $simpleMatrix, $githubRepository);
+            $matrix = $this->buildDynamicMatrix($matrix, $run, $simpleMatrix);
         }
 
         // extra jobs
