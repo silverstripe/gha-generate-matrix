@@ -72,8 +72,8 @@ const NO_INSTALLER_LOCKSTEPPED_REPOS = [
 ];
 
 const NO_INSTALLER_UNLOCKSTEPPED_REPOS = [
-    // vendor-plugin is not a recipe, though we also do not want installer
-    'vendor-plugin'
+    'vendor-plugin',
+    'recipe-plugin',
 ];
 
 const CMS_TO_REPO_MAJOR_VERSIONS = [
