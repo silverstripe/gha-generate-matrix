@@ -126,6 +126,10 @@ class JobCreatorTest extends TestCase
             ['myaccount/silverstripe-tagfield', 'pulls/burger/myfeature', $latest],
             ['myaccount/silverstripe-tagfield', '2-release', $latest],
             ['myaccount/silverstripe-tagfield', '2.9-release', $latest],
+            // hardcoded repo version
+            ['myaccount/silverstripe-session-manager', '1', $latest],
+            ['myaccount/silverstripe-session-manager', '1.2', '4.10.x-dev'],
+            ['myaccount/silverstripe-session-manager', 'burger', $latest],
         ];
     }
 
