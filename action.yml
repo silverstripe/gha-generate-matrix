@@ -44,8 +44,42 @@ runs:
   using: composite
   steps:
 
+    - name: Set fetch depth
+      id: set-fetch-depth
+      env:
+        GITHUB_REPOSITORY: ${{ github.repository }}
+      shell: bash
+      run: |
+        # Default fetch-depth of 1 will only fetch the latest commit
+        # This is fine for non-pull-request events where standard major.minor naming conventions
+        # are used so we do not need to attempt to get the name of the parent branch
+        FETCH_DEPTH=1
+        # For pull-requests, set fetch-depth to one more than the number of commits
+        # so we can later make a best attempt at getting the name of the parent branch
+        if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+          PR_NUMBER=${{ github.event.pull_request.number }}
+          # https://docs.github.com/en/rest/pulls/pulls#list-commits-on-a-pull-request
+          RESP_CODE=$(curl -w %{http_code} -s -o __pr_commits.json \
+          -X GET https://api.github.com/repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER/commits \
+          -H "Accept: application/vnd.github.v3+json" \
+          -H "Authorization: token ${{ github.token }}" \
+          )
+          if [[ $RESP_CODE == "200" ]]; then
+            NUM_COMMITS=$(cat __pr_commits.json | jq '. | length')
+            FETCH_DEPTH=$(( NUM_COMMITS + 1 ))
+            rm __pr_commits.json
+          else
+            echo "Failed to fetch commits for pull-request - HTTP response code was $RESP_CODE"
+            exit 1
+          fi
+        fi
+        echo "FETCH_DEPTH is $FETCH_DEPTH"
+        echo "::set-output name=fetch-depth::$FETCH_DEPTH"
+
     - name: Checkout code
       uses: actions/checkout@7884fcad6b5d53d10323aee724dc68d8b9096a2e # v2.4.2
+      with:
+        fetch-depth: ${{ steps.set-fetch-depth.outputs.fetch-depth }}
 
     - name: Install PHP
       uses: shivammathur/setup-php@3eda58347216592f618bb1dff277810b6698e4ca # v2.19.1

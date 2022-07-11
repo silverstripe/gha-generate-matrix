@@ -50,6 +50,7 @@ class JobCreator
             # this allows us to use `if [[ "${{ matrix.key }}" == "true" ]]; then` in gha-ci/ci.yml
             'installer_version' => $this->installerVersion,
             'php' => $this->getPhpVersion($phpIndex),
+            'parent_branch' => $this->parentBranch,
             'db' => DB_MYSQL_57,
             'composer_require_extra' => '',
             'composer_args' => '',
