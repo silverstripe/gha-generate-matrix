@@ -280,6 +280,17 @@ class JobCreatorTest extends TestCase
                     <<<EOT
                     github_repository: 'myaccount/silverstripe-versioned'
                     github_my_ref: 'myaccount-patch-1'
+                    parent_branch: '4.10-release'
+                    EOT
+                ]),
+                '4.10.x-dev'
+            ],
+            [
+                implode("\n", [
+                    $this->getGenericYml(),
+                    <<<EOT
+                    github_repository: 'myaccount/silverstripe-versioned'
+                    github_my_ref: 'myaccount-patch-1'
                     parent_branch: 'burger'
                     EOT
                 ]),
