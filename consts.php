@@ -109,7 +109,7 @@ const CMS_TO_REPO_MAJOR_VERSIONS = [
 
 const INSTALLER_TO_REPO_MINOR_VERSIONS = [
     '4.10' => [
-        'html5' => '2.3',
+        'silverstripe-html5' => '2.3',
         'silverstripe-elemental-bannerblock' => '2.4',
         'silverstripe-session-manager' => '1.2',
         'silverstripe-userforms' => '5.12',
