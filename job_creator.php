@@ -32,6 +32,14 @@ class JobCreator
                 return $cmsMajor . '.' . $portions[1] . '.x-dev';
             }
         }
+        // hardcoded installer version for repo version
+        foreach (array_keys(INSTALLER_TO_REPO_MINOR_VERSIONS) as $installerVersion) {
+            foreach (INSTALLER_TO_REPO_MINOR_VERSIONS[$installerVersion] as $_repo => $repoVersion) {
+                if ($repo === $_repo && $repoVersion === $branch) {
+                    return $installerVersion . '.x-dev';
+                }
+            }
+        }
         // fallback to use the latest minor version of installer
         $installerVersions = array_keys(INSTALLER_TO_PHP_VERSIONS);
         $installerVersions = array_filter($installerVersions, fn($version) => substr($version, 0, 1) === $cmsMajor);
