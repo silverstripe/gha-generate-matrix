@@ -16,12 +16,13 @@ class JobCreator
     public function getInstallerVersion(): string
     {
         $repo = explode('/', $this->githubRepository)[1];
+        // repo should not use installer
         if (in_array($repo, NO_INSTALLER_LOCKSTEPPED_REPOS) || in_array($repo, NO_INSTALLER_UNLOCKSTEPPED_REPOS)) {
             return '';
         }
         $branch = $this->getCleanedBranch();
         $cmsMajor = $this->getCmsMajorFromBranch();
-        // module is a lockstepped repo
+        // repo is a lockstepped repo
         if (in_array($repo, LOCKSTEPPED_REPOS) && is_numeric($branch)) {
             // e.g. ['4', '11']
             $portions = explode('.', $branch);
@@ -31,11 +32,7 @@ class JobCreator
                 return $cmsMajor . '.' . $portions[1] . '.x-dev';
             }
         }
-        // use the parent branch
-        if ($this->parentBranch && is_numeric($this->parentBranch)) {
-            return $this->parentBranch . '.x-dev';
-        }
-        // use the latest minor version of installer
+        // fallback to use the latest minor version of installer
         $installerVersions = array_keys(INSTALLER_TO_PHP_VERSIONS);
         $installerVersions = array_filter($installerVersions, fn($version) => substr($version, 0, 1) === $cmsMajor);
         // remove major versions
@@ -116,6 +113,14 @@ class JobCreator
         // for push events to the creative-commoners account
         if (preg_match('#^pulls/([0-9\.]+)/#', $branch, $matches)) {
             $branch = $matches[1];
+        }
+        // fallback to parent branch if available
+        if (
+            !is_numeric($branch) &&
+            $this->parentBranch && 
+            (is_numeric($this->parentBranch) || preg_match('#^[0-9\.]+-release$#', $this->parentBranch))
+        ) {
+            $branch = $this->parentBranch;
         }
         // e.g. 4.10-release
         $branch = preg_replace('#^([0-9\.]+)-release$#', '$1', $branch);
