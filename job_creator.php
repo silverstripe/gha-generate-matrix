@@ -2,6 +2,8 @@
 
 class JobCreator
 {
+    public string $composerJsonPath = 'composer.json';
+
     public string $branch = '';
 
     public string $githubRepository = '';
@@ -9,6 +11,8 @@ class JobCreator
     private string $installerVersion = '';
 
     private string $parentBranch = '';
+
+    private ?string $composerPhpConstraint = '';
 
     /**
      * Get the correct version of silverstripe/installer to include for the given repository and branch
@@ -75,6 +79,81 @@ class JobCreator
         return array_merge($default, $opts);
     }
 
+    private function isAllowedPhpVersion(string $phpVersion)
+    {
+        $phpVersion = (float) $phpVersion;
+        // no composer.json file or php version no defined in composer.json, just allow the php version
+        if ($this->composerPhpConstraint === null) {
+            return true;
+        }
+        if ($this->composerPhpConstraint === '') {
+            if (!file_exists($this->composerJsonPath)) {
+                $this->composerPhpConstraint = null;
+                return true;
+            }
+            $json = json_decode(file_get_contents($this->composerJsonPath));
+            if (!isset($json->require->php)) {
+                $this->composerPhpConstraint = null;
+                return true;
+            }
+            $this->composerPhpConstraint = $json->require->php;
+        }
+        $constraints = explode('||', $this->composerPhpConstraint);
+        $constraints = array_map(function($php) {
+            return preg_replace('#([0-9\.\*]+) *- *([0-9\.\*]+)#', '$1-$2', trim($php));
+        }, $constraints);
+        foreach ($constraints as $constraint) {
+            $subConstraintMatchedCount = 0;
+            $subConstraints = explode(' ', $constraint);
+            // handle hypenated ranges
+            for ($i = 0; $i < count($subConstraints); $i++) {
+                $subConstraint = $subConstraints[$i];
+                if (preg_match('#([0-9\.\*]+)-([0-9\.\*]+)#', $subConstraint, $matches)) {
+                    $subConstraints[$i] = '>=' . $matches[1];
+                    $subConstraints[] = '<=' . $matches[2];
+                }
+            }
+            foreach ($subConstraints as $subConstraint) {
+                $composerVersion = preg_replace('#[^0-9\.\.*]#', '', $subConstraint);
+                $isSemver = preg_match('#^[0-9\*]+\.[0-9\*]+\.[0-9\*]+$#', $composerVersion);
+                // remove any wildcards
+                $composerVersion = str_replace('.*', '', $composerVersion);
+                if ($composerVersion == '*') {
+                    return true;
+                }
+                $op = preg_replace('#[^\^~><=]#', '', $subConstraint);
+                // convert semver versions to minors
+                // github actions will use the latest patch so can assume that ignoring the patch version is safe
+                $composerVersion = preg_replace('#^([0-9]+)\.([0-9]+)\.[0-9]$#', '$1.$2', $composerVersion);
+                $composerVersion = (float) $composerVersion;
+                // treat ^ and ~ as if we are comparing semver versions (more intuitive for dev)
+                // even though we are comparing floats (minor versions)
+                // ~x.y and ^x.y.0 are the same and match any version within major
+                if ($op == '') {
+                    $op = '~';
+                }
+                if (!$isSemver && $op == '~') {
+                    $op = '^';
+                }
+                if (
+                    ($op == '^' && floor($phpVersion) == floor($composerVersion) && $phpVersion >= $composerVersion) ||
+                    ($op == '~' && $phpVersion == $composerVersion) ||
+                    ($op == '>=' && $phpVersion >= $composerVersion) ||
+                    ($op == '<' && $phpVersion < $composerVersion) ||
+                    ($op == '>' && $phpVersion > $composerVersion) ||
+                    ($op == '<' && $phpVersion < $composerVersion) ||
+                    ($op == '<=' && $phpVersion <= $composerVersion)
+                ) {
+                    $subConstraintMatchedCount++;
+                }
+            }
+            if ($subConstraintMatchedCount == count($subConstraints)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private function getPhpVersion(int $phpIndex): string
     {
         $key = str_replace('.x-dev', '', $this->installerVersion);
@@ -89,7 +168,28 @@ class JobCreator
             }
         }
         $phpVersions = INSTALLER_TO_PHP_VERSIONS[$key] ?? INSTALLER_TO_PHP_VERSIONS['4'];
-        return $phpVersions[$phpIndex] ?? $phpVersions[count($phpVersions) - 1];
+        // Use the max allowed php version
+        if (!array_key_exists($phpIndex, $phpVersions)) {
+            for ($i = count($phpVersions) - 1; $i >= 0; $i--) {
+                $phpVersion = $phpVersions[$i];
+                if ($this->isAllowedPhpVersion($phpVersion)) {
+                    return $phpVersion;
+                }
+            }
+        }
+        // return the minimum compatible allowed PHP version, respecting $phpIndex
+        foreach (array_slice($phpVersions, $phpIndex) as $phpVersion) {
+            if ($this->isAllowedPhpVersion($phpVersion)) {
+                return $phpVersion;
+            }
+        }
+        // didn't find anything, disregard $phpIndex and try and find anything compatible
+        foreach (array_reverse(array_slice($phpVersions, 0, $phpIndex)) as $phpVersion) {
+            if ($this->isAllowedPhpVersion($phpVersion)) {
+                return $phpVersion;
+            }
+        }
+        throw new Exception("No valid PHP version allowed");
     }
 
     private function getCmsMajorFromBranch(): string
