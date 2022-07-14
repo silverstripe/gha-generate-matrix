@@ -342,7 +342,7 @@ class JobCreatorTest extends TestCase
         ];
     }
 
-     /**
+    /**
      * @dataProvider provideGetInputsInvalid
      */
     public function testGetInputsInvalid(string $yml, string $expectedMessage)
@@ -381,6 +381,74 @@ class JobCreatorTest extends TestCase
                 EOT,
                 'Failed to parse yml'
             ],
+        ];
+    }
+
+    /**
+     * @dataProvider provideGetPhpVersion
+     */
+    public function testGetPhpVersion($composerPhpConstraint, $expectedPhps): void
+    {
+        if (!function_exists('yaml_parse')) {
+            $this->markTestSkipped('yaml extension is not installed');
+        }
+        // use a hardcoded entry from INSTALLER_TO_REPO_MINOR_VERSIONS so that we get
+        // framework 4.10.x-dev which creates php 7.3 jobs, this is so that this unit test
+        // keeps working as we increment the latest version of installer
+        $repo = 'silverstripe-elemental-bannerblock';
+            // use a hardcoded entry from INSTALLER_TO_REPO_MINOR_VERSIONS so that we get
+            // framework 4.10.x-dev which creates php 7.3 jobs, this is so that this unit test
+            // keeps working as we increment the latest version of installer
+        $minorVersion = '2.4';
+        if (INSTALLER_TO_REPO_MINOR_VERSIONS['4.10'][$repo] != $minorVersion) {
+            throw new Exception('Required const is missing for unit testing');
+        }
+        $yml = implode("\n", [
+            $this->getGenericYml(),
+            <<<EOT
+            github_repository: 'myaccount/$repo'
+            github_my_ref: '$minorVersion'
+            EOT
+        ]);
+        $creator = new JobCreator();
+        $creator->composerJsonPath = '__composer.json';
+        $composer = new stdClass();
+        $composer->require = new stdClass();
+        if ($composerPhpConstraint) {
+            $composer->require->php = $composerPhpConstraint;
+        }
+        file_put_contents('__composer.json', json_encode($composer, JSON_PRETTY_PRINT + JSON_UNESCAPED_SLASHES));
+        $json = json_decode($creator->createJson($yml));
+        foreach ($json->include as $i => $job) {
+            $expectedPhp = $expectedPhps[$i];
+            $this->assertSame($expectedPhp, $job->php);
+        }
+        unlink('__composer.json');
+    }
+
+    public function provideGetPhpVersion(): array
+    {
+        return [
+            ['', ['7.3', '7.4', '8.0', '8.0']],
+            ['*', ['7.3', '7.4', '8.0', '8.0']],
+            ['*.*', ['7.3', '7.4', '8.0', '8.0']],
+            ['^7.4 || ^8.0', ['7.4', '7.4', '8.0', '8.0']],
+            ['^7', ['7.3', '7.4', '7.4', '7.4']],
+            ['~7.3', ['7.3', '7.4', '7.4', '7.4']],
+            ['>7.2', ['7.3', '7.4', '8.0', '8.0']],
+            ['>= 8', ['8.0', '8.0', '8.0', '8.0']],
+            ['<7.4', ['7.3', '7.3', '7.3', '7.3']],
+            ['<=7.4', ['7.3', '7.4', '7.4', '7.4']],
+            ['^8.0.3', ['8.0', '8.0', '8.0', '8.0']],
+            ['7.3.3', ['7.3', '7.3', '7.3', '7.3']],
+            ['8.0.*', ['8.0', '8.0', '8.0', '8.0']],
+            ['8.*', ['8.0', '8.0', '8.0', '8.0']],
+            ['>=7.3 <8', ['7.3', '7.4', '7.4', '7.4']],
+            ['>=7.3 <8.1', ['7.3', '7.4', '8.0', '8.0']],
+            ['>=7.3 <7.4', ['7.3', '7.3', '7.3', '7.3']],
+            ['^7 <7.4', ['7.3', '7.3', '7.3', '7.3']],
+            ['7.3-7.4', ['7.3', '7.4', '7.4', '7.4']],
+            ['7.3 - 8.0', ['7.3', '7.4', '8.0', '8.0']],
         ];
     }
 }
