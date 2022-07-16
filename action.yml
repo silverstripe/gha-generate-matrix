@@ -2,25 +2,25 @@ name: Generate Matrix
 description: GitHub Action to create a dynamic Silverstripe CI matrix
 
 inputs:
-  # extra jobs must be multi-line string, as there's no support for type: array for inputs
+  # Extra jobs must be multi-line string, as there's no support for type: array for inputs
   extra_jobs:
     type: string
     required: false
     default: ''
-  # simple matrix will only run a single job with the lowest supported PHP and mysql versions instead of a full matrix
+  # Simple matrix will only run a single job with the lowest supported PHP and mysql versions instead of a full matrix
   simple_matrix:
     type: boolean
     default: false
   endtoend:
     type: boolean
     default: true
-  # this option is intended only for community modules
-  # modules on silverstripe account will ignore this value and always run codecov
+  # This option is intended only for community modules
+  # Modules on silverstripe account will ignore this value and always run codecov
   phpcoverage:
     type: boolean
     default: false
-  # this option is specifically for turning off codecov on modules on the silverstripe account
-  # use this if there are something like segfaults during a codecov run
+  # This option is specifically for turning off codecov on modules on the silverstripe account
+  # Use this if there are something like segfaults during a codecov run
   phpcoverage_force_off:
     type: boolean
     default: false
@@ -56,17 +56,16 @@ runs:
         FETCH_DEPTH=1
         # For pull-requests, set fetch-depth to one more than the number of commits
         # so we can later make a best attempt at getting the name of the parent branch
-        if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+        if [ "${{ github.event_name }}" == "pull_request" ]; then
           PR_NUMBER=${{ github.event.pull_request.number }}
           # https://docs.github.com/en/rest/pulls/pulls#list-commits-on-a-pull-request
           RESP_CODE=$(curl -w %{http_code} -s -o __pr_commits.json \
-          -X GET https://api.github.com/repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER/commits \
-          -H "Accept: application/vnd.github.v3+json" \
-          -H "Authorization: token ${{ github.token }}" \
+            -X GET https://api.github.com/repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER/commits \
+            -H "Accept: application/vnd.github.v3+json" \
+            -H "Authorization: token ${{ github.token }}" \
           )
-          if [[ $RESP_CODE == "200" ]]; then
-            NUM_COMMITS=$(cat __pr_commits.json | jq '. | length')
-            FETCH_DEPTH=$(( NUM_COMMITS + 1 ))
+          if [ "$RESP_CODE" == 200 ]; then
+            FETCH_DEPTH=$(cat __pr_commits.json | jq '. | length + 1')
             rm __pr_commits.json
           else
             echo "Failed to fetch commits for pull-request - HTTP response code was $RESP_CODE"
@@ -96,35 +95,33 @@ runs:
         GITHUB_REPOSITORY: ${{ github.repository }}
         # github.base_ref is the target branch on a pull-request
         # github.ref_name is the name of the branch on push, and the tag on tag
-        GITHUB_MY_REF: ${{ github.base_ref && github.base_ref || github.ref_name }}
+        GITHUB_MY_REF: ${{ github.base_ref || github.ref_name }}
       run: |
         # Escape double quotes '"' => '\"'
         EXTRA_JOBS=${EXTRA_JOBS//\"/\\\"}
         GITHUB_MY_REF=${GITHUB_MY_REF//\"/\\\"}
-        if [ -f __inputs.yml ]; then
-          rm __inputs.yml
-        fi
-        # e.g. push event to branch called myaccount-patch-1
-        # use git history to make a best attempt at getting the parent branch
-        # note: { grep * || :; } is to prevent exit code of 1 on zero-match from halting workflow
-        PARENT_BRANCH=$(git show-branch -a 2>/dev/null | { grep '\*' || :; } | { grep -v `git rev-parse --abbrev-ref HEAD` || :; } | head -n1 | sed 's/.*\[\(.*\)\].*/\1/' | sed 's/[\^~].*//')
-        # create __inputs.yml
-        touch __inputs.yml
-        echo "endtoend: ${{ inputs.endtoend }}" >> __inputs.yml
-        echo "js: ${{ inputs.js }}" >> __inputs.yml
-        echo "phpcoverage: ${{ inputs.phpcoverage }}" >> __inputs.yml
-        echo "phpcoverage_force_off: ${{ inputs.phpcoverage_force_off }}" >> __inputs.yml
-        echo "phplinting: ${{ inputs.phplinting }}" >> __inputs.yml
-        echo "phpunit: ${{ inputs.phpunit }}" >> __inputs.yml
-        echo "simple_matrix: ${{ inputs.simple_matrix }}" >> __inputs.yml
-        echo "github_repository: '$GITHUB_REPOSITORY'" >> __inputs.yml
-        echo "github_my_ref: '$GITHUB_MY_REF'" >> __inputs.yml
-        echo "parent_branch: '$PARENT_BRANCH'" >> __inputs.yml
-        if [[ "$EXTRA_JOBS" != "" ]]; then
-          echo "extra_jobs:" >> __inputs.yml
-          echo "$EXTRA_JOBS" >> __inputs.yml
-        fi
-        echo "cat __inputs.yml"
+        rm -f __inputs.yml
+        # E.g. push event to branch called myaccount-patch-1
+        # Use git history to make a best attempt at getting the parent branch
+        PARENT_BRANCH=$(git show-branch -a 2>/dev/null | grep -F '*' | grep -v "$(git rev-parse --abbrev-ref HEAD)" | head -n 1 | sed -e 's/.*\[\(.*\)\].*/\1/' | sed -e 's/[\^~].*//' || true)
+        # Create __inputs.yml
+        {
+          echo "endtoend: ${{ inputs.endtoend }}"
+          echo "js: ${{ inputs.js }}"
+          echo "phpcoverage: ${{ inputs.phpcoverage }}"
+          echo "phpcoverage_force_off: ${{ inputs.phpcoverage_force_off }}"
+          echo "phplinting: ${{ inputs.phplinting }}"
+          echo "phpunit: ${{ inputs.phpunit }}"
+          echo "simple_matrix: ${{ inputs.simple_matrix }}"
+          echo "github_repository: '$GITHUB_REPOSITORY'"
+          echo "github_my_ref: '$GITHUB_MY_REF'"
+          echo "parent_branch: '$PARENT_BRANCH'"
+          if [ -n "$EXTRA_JOBS" ]; then
+            echo "extra_jobs:"
+            echo "$EXTRA_JOBS"
+          fi
+        } > __inputs.yml
+        echo "Contents of __inputs.yml"
         cat __inputs.yml
 
     - name: Run php script
