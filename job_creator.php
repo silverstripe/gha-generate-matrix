@@ -284,8 +284,8 @@ class JobCreator
 
     private function doRunPhpCoverage(array $run): bool
     {
-        // always run on silverstripe account, unless phpcoverage_force_off is set to true
-        if (preg_match('#^silverstripe/#', $this->githubRepository)) {
+        // (currently disabled) always run on silverstripe account, unless phpcoverage_force_off is set to true
+        if (false && preg_match('#^silverstripe/#', $this->githubRepository)) {
             return !$run['phpcoverage_force_off'];
         }
         return $run['phpcoverage'];
