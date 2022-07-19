@@ -38,9 +38,12 @@ class JobCreator
         }
         // hardcoded installer version for repo version
         foreach (array_keys(INSTALLER_TO_REPO_MINOR_VERSIONS) as $installerVersion) {
-            foreach (INSTALLER_TO_REPO_MINOR_VERSIONS[$installerVersion] as $_repo => $repoVersion) {
-                if ($repo === $_repo && $repoVersion === $branch) {
-                    return $installerVersion . '.x-dev';
+            foreach (INSTALLER_TO_REPO_MINOR_VERSIONS[$installerVersion] as $_repo => $_repoVersions) {
+                $repoVersions = is_array($_repoVersions) ? $_repoVersions : [$_repoVersions];
+                foreach ($repoVersions as $repoVersion) {
+                    if ($repo === $_repo && $repoVersion === $branch) {
+                        return $installerVersion . '.x-dev';
+                    }
                 }
             }
         }
