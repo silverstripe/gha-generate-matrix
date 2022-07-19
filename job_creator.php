@@ -338,10 +338,19 @@ class JobCreator
         }
         // endtoend / behat
         if ($run['endtoend'] && file_exists('behat.yml')) {
-            $matrix['include'][] = $this->createJob(0, [
+            $job = $this->createJob(0, [
                 'endtoend' => true,
                 'endtoend_suite' => 'root'
             ]);
+            // use minimum version of 7.4 for endtoend because was having apt dependency issues
+            // in CI when using php 7.3:
+            // The following packages have unmet dependencies:
+            // libpcre2-dev : Depends: libpcre2-8-0 (= 10.39-3+ubuntu20.04.1+deb.sury.org+2) but
+            // 10.40-1+ubuntu20.04.1+deb.sury.org+1 is to be installed
+            if ($job['php'] == '7.3') {
+                $job['php'] = '7.4';
+            }
+            $matrix['include'][] = $job;
             if (!$simpleMatrix) {
                 $matrix['include'][] = $this->createJob(3, [
                     'db' => DB_MYSQL_80,
