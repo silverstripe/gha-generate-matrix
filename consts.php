@@ -51,6 +51,10 @@ const LOCKSTEPPED_REPOS = [
     'silverstripe-versioned-admin',
     // recipe-solr-search doesn't include recipe-cms or recipe-core unlike our other recipes
     'recipe-solr-search',
+    // recipe-blog requires a theme for the unit tests to work, the config and dependency for which are
+    // supplied by installer. Just adding a theme as a dev-dependency is insufficient because we'd still
+    // lack the yml config to activate that theme
+    'recipe-blog',
 ];
 
 // Repositories that do not require silverstripe/installer to be explicitly added as a dependency for testing
@@ -58,7 +62,6 @@ const NO_INSTALLER_LOCKSTEPPED_REPOS = [
     // these are/include recipe-cms or recipe-core, so we don't want to composer require installer
     // in .travis.yml they used the 'self' provision rather than 'standard'
     'recipe-authoring-tools',
-    'recipe-blog',
     'recipe-ccl',
     'recipe-cms',
     'recipe-collaboration',
