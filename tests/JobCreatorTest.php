@@ -130,6 +130,12 @@ class JobCreatorTest extends TestCase
             ['myaccount/silverstripe-session-manager', '1', $latest],
             ['myaccount/silverstripe-session-manager', '1.2', '4.10.x-dev'],
             ['myaccount/silverstripe-session-manager', 'burger', $latest],
+            // hardcoded repo version using array
+            ['myaccount/silverstripe-html5', '2', $latest],
+            ['myaccount/silverstripe-html5', '2.2', '4.10.x-dev'],
+            ['myaccount/silverstripe-html5', '2.3', '4.10.x-dev'],
+            ['myaccount/silverstripe-html5', '2.4', '4.11.x-dev'],
+            ['myaccount/silverstripe-html5', 'burger', $latest],
         ];
     }
 
@@ -396,9 +402,6 @@ class JobCreatorTest extends TestCase
         // framework 4.10.x-dev which creates php 7.3 jobs, this is so that this unit test
         // keeps working as we increment the latest version of installer
         $repo = 'silverstripe-elemental-bannerblock';
-            // use a hardcoded entry from INSTALLER_TO_REPO_MINOR_VERSIONS so that we get
-            // framework 4.10.x-dev which creates php 7.3 jobs, this is so that this unit test
-            // keeps working as we increment the latest version of installer
         $minorVersion = '2.4';
         if (INSTALLER_TO_REPO_MINOR_VERSIONS['4.10'][$repo] != $minorVersion) {
             throw new Exception('Required const is missing for unit testing');

@@ -38,9 +38,12 @@ class JobCreator
         }
         // hardcoded installer version for repo version
         foreach (array_keys(INSTALLER_TO_REPO_MINOR_VERSIONS) as $installerVersion) {
-            foreach (INSTALLER_TO_REPO_MINOR_VERSIONS[$installerVersion] as $_repo => $repoVersion) {
-                if ($repo === $_repo && $repoVersion === $branch) {
-                    return $installerVersion . '.x-dev';
+            foreach (INSTALLER_TO_REPO_MINOR_VERSIONS[$installerVersion] as $_repo => $_repoVersions) {
+                $repoVersions = is_array($_repoVersions) ? $_repoVersions : [$_repoVersions];
+                foreach ($repoVersions as $repoVersion) {
+                    if ($repo === $_repo && $repoVersion === $branch) {
+                        return $installerVersion . '.x-dev';
+                    }
                 }
             }
         }
@@ -284,8 +287,8 @@ class JobCreator
 
     private function doRunPhpCoverage(array $run): bool
     {
-        // always run on silverstripe account, unless phpcoverage_force_off is set to true
-        if (preg_match('#^silverstripe/#', $this->githubRepository)) {
+        // (currently disabled) always run on silverstripe account, unless phpcoverage_force_off is set to true
+        if (false && preg_match('#^silverstripe/#', $this->githubRepository)) {
             return !$run['phpcoverage_force_off'];
         }
         return $run['phpcoverage'];
@@ -335,10 +338,19 @@ class JobCreator
         }
         // endtoend / behat
         if ($run['endtoend'] && file_exists('behat.yml')) {
-            $matrix['include'][] = $this->createJob(0, [
+            $job = $this->createJob(0, [
                 'endtoend' => true,
                 'endtoend_suite' => 'root'
             ]);
+            // use minimum version of 7.4 for endtoend because was having apt dependency issues
+            // in CI when using php 7.3:
+            // The following packages have unmet dependencies:
+            // libpcre2-dev : Depends: libpcre2-8-0 (= 10.39-3+ubuntu20.04.1+deb.sury.org+2) but
+            // 10.40-1+ubuntu20.04.1+deb.sury.org+1 is to be installed
+            if ($job['php'] == '7.3') {
+                $job['php'] = '7.4';
+            }
+            $matrix['include'][] = $job;
             if (!$simpleMatrix) {
                 $matrix['include'][] = $this->createJob(3, [
                     'db' => DB_MYSQL_80,
