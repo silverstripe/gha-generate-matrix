@@ -47,15 +47,21 @@ class JobCreator
                 }
             }
         }
-        // fallback to use the latest minor version of installer
+        // fallback to use the next-minor or latest-minor version of installer
         $installerVersions = array_keys(INSTALLER_TO_PHP_VERSIONS);
         $installerVersions = array_filter($installerVersions, fn($version) => substr($version, 0, 1) === $cmsMajor);
-        // remove major versions
-        $installerVersions = array_diff($installerVersions, ['4', '5', '6']);
-        // get the minor portions of the verisons e.g. [9, 10, 11]
-        $minorPortions = array_map(fn($portions) => (int) explode('.', $portions)[1], $installerVersions);
-        sort($minorPortions);
-        return $cmsMajor . '.' . $minorPortions[count($minorPortions) - 1] . '.x-dev';
+        if (preg_match('#^[1-9]+[0-9]*$#', $branch)) {
+            // next-minor e.g. 4
+            return $cmsMajor . '.x-dev';
+        } else {
+            // current-minor e.g. 4.11
+            // remove major versions
+            $installerVersions = array_diff($installerVersions, ['4', '5', '6']);
+            // get the minor portions of the verisons e.g. [9, 10, 11]
+            $minorPortions = array_map(fn($portions) => (int) explode('.', $portions)[1], $installerVersions);
+            sort($minorPortions);
+            return $cmsMajor . '.' . $minorPortions[count($minorPortions) - 1] . '.x-dev';
+        }
     }
     
     public function createJob(int $phpIndex, array $opts): array
