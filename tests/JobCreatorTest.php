@@ -455,4 +455,36 @@ class JobCreatorTest extends TestCase
             ['7.3 - 8.0', ['7.3', '7.4', '8.0', '8.0']],
         ];
     }
+
+    /**
+     * @dataProvider provideDynamicMatrix
+     */
+    public function testDynamicMatrix(string $value, int $jobCount)
+    {
+        if (!function_exists('yaml_parse')) {
+            $this->markTestSkipped('yaml extension is not installed');
+        }
+        $yml = implode("\n", [
+            $this->getGenericYml(),
+            <<<EOT
+            github_repository: 'myaccount/somerepo'
+            github_my_ref: 'somebranch'
+            EOT
+        ]);
+        if ($value !== '') {
+            $yml .= "\ndynamic_matrix: $value";
+        }
+        $creator = new JobCreator();
+        $json = json_decode($creator->createJson($yml));
+        $this->assertSame($jobCount, count($json->include));
+    }
+
+    public function provideDynamicMatrix(): array
+    {
+        return [
+            ['true', 4],
+            ['false', 0],
+            ['', 4],
+        ];
+    }
 }
