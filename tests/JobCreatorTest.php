@@ -77,7 +77,7 @@ class JobCreatorTest extends TestCase
         $this->assertSame($expected, $actual);
     }
 
-    private function getLatestInstallerVersion(string $cmsMajor): string
+    private function getCurrentMinorInstallerVersion(string $cmsMajor): string
     {
         $versions = array_keys(INSTALLER_TO_PHP_VERSIONS);
         $versions = array_filter($versions, fn($version) => substr($version, 0, 1) === $cmsMajor);
@@ -88,7 +88,8 @@ class JobCreatorTest extends TestCase
 
     public function provideGetInstallerVersion(): array
     {
-        $latest = $this->getLatestInstallerVersion('4') . '.x-dev';
+        $nextMinor = '4.x-dev';
+        $currentMinor = $this->getCurrentMinorInstallerVersion('4') . '.x-dev';
         return [
             // no-installer repo
             ['myaccount/recipe-cms', '4', ''],
@@ -102,40 +103,40 @@ class JobCreatorTest extends TestCase
             // lockstepped repo with 4.* naming
             ['myaccount/silverstripe-framework', '4', '4.x-dev'],
             ['myaccount/silverstripe-framework', '4.10', '4.10.x-dev'],
-            ['myaccount/silverstripe-framework', 'burger', $latest],
+            ['myaccount/silverstripe-framework', 'burger', $currentMinor],
             ['myaccount/silverstripe-framework', 'pulls/4/mybugfix', '4.x-dev'],
             ['myaccount/silverstripe-framework', 'pulls/4.10/mybugfix', '4.10.x-dev'],
-            ['myaccount/silverstripe-framework', 'pulls/burger/myfeature', $latest],
+            ['myaccount/silverstripe-framework', 'pulls/burger/myfeature', $currentMinor],
             ['myaccount/silverstripe-framework', '4-release', '4.x-dev'],
             ['myaccount/silverstripe-framework', '4.10-release', '4.10.x-dev'],
             // lockstepped repo with 1.* naming
             ['myaccount/silverstripe-admin', '1', '4.x-dev'],
             ['myaccount/silverstripe-admin', '1.10', '4.10.x-dev'],
-            ['myaccount/silverstripe-admin', 'burger', $latest],
+            ['myaccount/silverstripe-admin', 'burger', $currentMinor],
             ['myaccount/silverstripe-admin', 'pulls/1/mybugfix', '4.x-dev'],
             ['myaccount/silverstripe-admin', 'pulls/1.10/mybugfix', '4.10.x-dev'],
-            ['myaccount/silverstripe-admin', 'pulls/burger/myfeature', $latest],
+            ['myaccount/silverstripe-admin', 'pulls/burger/myfeature', $currentMinor],
             ['myaccount/silverstripe-admin', '1-release', '4.x-dev'],
             ['myaccount/silverstripe-admin', '1.10-release', '4.10.x-dev'],
             // non-lockedstepped repo
-            ['myaccount/silverstripe-tagfield', '2', $latest],
-            ['myaccount/silverstripe-tagfield', '2.9', $latest],
-            ['myaccount/silverstripe-tagfield', 'burger', $latest],
-            ['myaccount/silverstripe-tagfield', 'pulls/2/mybugfix', $latest],
-            ['myaccount/silverstripe-tagfield', 'pulls/2.9/mybugfix', $latest],
-            ['myaccount/silverstripe-tagfield', 'pulls/burger/myfeature', $latest],
-            ['myaccount/silverstripe-tagfield', '2-release', $latest],
-            ['myaccount/silverstripe-tagfield', '2.9-release', $latest],
+            ['myaccount/silverstripe-tagfield', '2', $nextMinor],
+            ['myaccount/silverstripe-tagfield', '2.9', $currentMinor],
+            ['myaccount/silverstripe-tagfield', 'burger', $currentMinor],
+            ['myaccount/silverstripe-tagfield', 'pulls/2/mybugfix', $nextMinor],
+            ['myaccount/silverstripe-tagfield', 'pulls/2.9/mybugfix', $currentMinor],
+            ['myaccount/silverstripe-tagfield', 'pulls/burger/myfeature', $currentMinor],
+            ['myaccount/silverstripe-tagfield', '2-release', $nextMinor],
+            ['myaccount/silverstripe-tagfield', '2.9-release', $currentMinor],
             // hardcoded repo version
-            ['myaccount/silverstripe-session-manager', '1', $latest],
+            ['myaccount/silverstripe-session-manager', '1', $nextMinor],
             ['myaccount/silverstripe-session-manager', '1.2', '4.10.x-dev'],
-            ['myaccount/silverstripe-session-manager', 'burger', $latest],
+            ['myaccount/silverstripe-session-manager', 'burger', $currentMinor],
             // hardcoded repo version using array
-            ['myaccount/silverstripe-html5', '2', $latest],
+            ['myaccount/silverstripe-html5', '2', $nextMinor],
             ['myaccount/silverstripe-html5', '2.2', '4.10.x-dev'],
             ['myaccount/silverstripe-html5', '2.3', '4.10.x-dev'],
             ['myaccount/silverstripe-html5', '2.4', '4.11.x-dev'],
-            ['myaccount/silverstripe-html5', 'burger', $latest],
+            ['myaccount/silverstripe-html5', 'burger', $currentMinor],
         ];
     }
 
@@ -271,7 +272,7 @@ class JobCreatorTest extends TestCase
 
     public function provideParentBranch(): array
     {
-        $latest = $this->getLatestInstallerVersion('4') . '.x-dev';
+        $latest = $this->getCurrentMinorInstallerVersion('4') . '.x-dev';
         return [
             [
                 implode("\n", [
