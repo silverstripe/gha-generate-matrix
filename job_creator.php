@@ -400,7 +400,7 @@ class JobCreator
         $inputs = $this->getInputs($yml);
         // $myRef will either be a branch for push (i.e cron) and pull-request (target branch), or a semver tag
         $myRef = $inputs['github_my_ref'];
-        $isTag = preg_match('#^[0-9]+\.[0-9]+\.[0-9]+$#', $myRef, $m);
+        $isTag = preg_match('#^([0-9]+)\.([0-9]+)\.[0-9]+$#', $myRef, $m);
         $this->branch = $isTag ? sprintf('%d.%d', $m[1], $m[2]) : $myRef;
 
         // parent branch is a best attempt to get the parent branch of the branch via bash
