@@ -487,4 +487,34 @@ class JobCreatorTest extends TestCase
             ['', 4],
         ];
     }
+
+    /**
+     * @dataProvider provideGitHubMyRefTags
+     */
+    public function testGitHubMyRefTags(string $githubMyRef, string $expectedInstallerVersion)
+    {
+        if (!function_exists('yaml_parse')) {
+            $this->markTestSkipped('yaml extension is not installed');
+        }
+        $yml = implode("\n", [
+            $this->getGenericYml(),
+            <<<EOT
+            github_repository: 'silverstripe/silverstripe-framework'
+            github_my_ref: '$githubMyRef'
+            EOT
+        ]);
+        $creator = new JobCreator();
+        $this->assertStringContainsString(
+            "\"installer_version\":\"$expectedInstallerVersion\"",
+            $creator->createJson($yml)
+        );
+    }
+
+    public function provideGitHubMyRefTags(): array
+    {
+        return [
+            ['4.10', '4.10.x-dev'],
+            ['4.10.6', '4.10.x-dev'],
+        ];
+    }
 }
