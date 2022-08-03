@@ -414,20 +414,23 @@ class JobCreatorTest extends TestCase
             github_my_ref: '$minorVersion'
             EOT
         ]);
-        $creator = new JobCreator();
-        $creator->composerJsonPath = '__composer.json';
-        $composer = new stdClass();
-        $composer->require = new stdClass();
-        if ($composerPhpConstraint) {
-            $composer->require->php = $composerPhpConstraint;
+        try {
+            $creator = new JobCreator();
+            $creator->composerJsonPath = '__composer.json';
+            $composer = new stdClass();
+            $composer->require = new stdClass();
+            if ($composerPhpConstraint) {
+                $composer->require->php = $composerPhpConstraint;
+            }
+            file_put_contents('__composer.json', json_encode($composer, JSON_PRETTY_PRINT + JSON_UNESCAPED_SLASHES));
+            $json = json_decode($creator->createJson($yml));
+            foreach ($json->include as $i => $job) {
+                $expectedPhp = $expectedPhps[$i];
+                $this->assertSame($expectedPhp, $job->php);
+            }
+        } finally {
+            unlink('__composer.json');
         }
-        file_put_contents('__composer.json', json_encode($composer, JSON_PRETTY_PRINT + JSON_UNESCAPED_SLASHES));
-        $json = json_decode($creator->createJson($yml));
-        foreach ($json->include as $i => $job) {
-            $expectedPhp = $expectedPhps[$i];
-            $this->assertSame($expectedPhp, $job->php);
-        }
-        unlink('__composer.json');
     }
 
     public function provideGetPhpVersion(): array
@@ -515,6 +518,53 @@ class JobCreatorTest extends TestCase
         return [
             ['4.10', '4.10.x-dev'],
             ['4.10.6', '4.10.x-dev'],
+        ];
+    }
+
+    /**
+     * @dataProvider provideGraphql3
+     */
+    public function testGraphql3(string $simpleMatrix, string $githubMyRef, array $jobsRequiresGraphql3): void
+    {
+        if (!function_exists('yaml_parse')) {
+            $this->markTestSkipped('yaml extension is not installed');
+        }
+        $yml = implode("\n", [
+            $this->getGenericYml(),
+            // using silverstripe/recipe-cms because it there is currently support it for getting the
+            // major version of installer set based on github_my_ref
+            <<<EOT
+            github_repository: 'silverstripe/recipe-cms'
+            github_my_ref: '$githubMyRef'
+            simple_matrix: $simpleMatrix
+            EOT
+        ]);
+        try {
+            // create a temporary fake behat.yml file so that the dynamic matrix include endtoend jobs
+            file_put_contents('behat.yml', '');
+            $creator = new JobCreator();
+            $json = json_decode($creator->createJson($yml));
+            $j = 0;
+            foreach ($json->include as $job) {
+                if ($job->endtoend == 'false') {
+                    continue;
+                }
+                $b = !$jobsRequiresGraphql3[$j];
+                $this->assertTrue(strpos($job->composer_require_extra, 'silverstripe/graphql:^3') !== $b);
+                $j++;
+            }
+        } finally {
+            unlink('behat.yml');
+        }
+    }
+
+    public function provideGraphql3(): array
+    {
+        return [
+            ['false', '4.11', [true, false]],
+            ['true', '4.11', [false]],
+            ['false', '5.0', [false, false]],
+            ['true', '5.0', [false]],
         ];
     }
 }

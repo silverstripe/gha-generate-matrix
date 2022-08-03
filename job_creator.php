@@ -344,9 +344,11 @@ class JobCreator
         }
         // endtoend / behat
         if ($run['endtoend'] && file_exists('behat.yml')) {
+            $graphql3 = !$simpleMatrix && $this->getCmsMajorFromBranch() == '4';
             $job = $this->createJob(0, [
                 'endtoend' => true,
-                'endtoend_suite' => 'root'
+                'endtoend_suite' => 'root',
+                'composer_require_extra' => $graphql3 ? 'silverstripe/graphql:^3' : ''
             ]);
             // use minimum version of 7.4 for endtoend because was having apt dependency issues
             // in CI when using php 7.3:
