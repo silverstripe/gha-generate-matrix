@@ -567,4 +567,59 @@ class JobCreatorTest extends TestCase
             ['true', '5.0', [false]],
         ];
     }
+
+    /**
+     * @dataProvider provideGetInstallerVersionCMS5FromComposer
+     */
+    public function testGetInstallerVersionCMS5FromComposer(
+        string $githubRepository,
+        string $branch,
+        array $composerDeps,
+        string $expected
+    ): void {
+        if (!function_exists('yaml_parse')) {
+            $this->markTestSkipped('yaml extension is not installed');
+        }
+        $yml = implode("\n", [
+            $this->getGenericYml(),
+            <<<EOT
+            github_repository: '$githubRepository'
+            github_my_ref: '$branch'
+            EOT
+        ]);
+        try {
+            $creator = new JobCreator();
+            $creator->composerJsonPath = '__composer.json';
+            $composer = new stdClass();
+            $composer->require = new stdClass();
+            foreach ($composerDeps as $dep => $version) {
+                $composer->require->{$dep} = $version;
+            }
+            file_put_contents('__composer.json', json_encode($composer, JSON_PRETTY_PRINT + JSON_UNESCAPED_SLASHES));
+            $json = json_decode($creator->createJson($yml));
+            $this->assertSame($expected, $json->include[0]->installer_version);
+        } finally {
+            unlink('__composer.json');
+        }
+    }
+
+    public function provideGetInstallerVersionCMS5FromComposer(): array
+    {
+        $currentMinor = $this->getCurrentMinorInstallerVersion('4') . '.x-dev';
+        return [
+            // priority given to branch name
+            ['myaccount/silverstripe-framework', '4', [], '4.x-dev'],
+            ['myaccount/silverstripe-framework', '4.10', [], '4.10.x-dev'],
+            ['myaccount/silverstripe-framework', 'burger', [], $currentMinor],
+            ['myaccount/silverstripe-framework', '5', [], '5.x-dev'],
+            ['myaccount/silverstripe-framework', '5.10', [], '5.10.x-dev'],
+            // fallback to looking at deps in composer.json, use current minor of installer .x-dev
+            ['myaccount/silverstripe-admin', 'mybranch', ['silverstripe/framework' => '5.x-dev'], '5.0.x-dev'],
+            ['myaccount/silverstripe-admin', 'mybranch', ['silverstripe/framework' => '5.0.x-dev'], '5.0.x-dev'],
+            ['myaccount/silverstripe-admin', 'mybranch', ['silverstripe/framework' => '^5'], '5.0.x-dev'],
+            ['myaccount/silverstripe-somemodule', 'mybranch', ['silverstripe/cms' => '^5'], '5.0.x-dev'],
+            ['myaccount/silverstripe-somemodule', 'mybranch', ['silverstripe/admin' => '^2'], '5.0.x-dev'],
+            ['myaccount/silverstripe-somemodule', '3', ['silverstripe/framework' => '^5'], '5.x-dev'],
+        ];
+    }
 }

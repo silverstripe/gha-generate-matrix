@@ -25,7 +25,7 @@ class JobCreator
             return '';
         }
         $branch = $this->getCleanedBranch();
-        $cmsMajor = $this->getCmsMajorFromBranch();
+        $cmsMajor = $this->getCmsMajor();
         // repo is a lockstepped repo
         if (in_array($repo, LOCKSTEPPED_REPOS) && is_numeric($branch)) {
             // e.g. ['4', '11']
@@ -60,7 +60,8 @@ class JobCreator
             // get the minor portions of the verisons e.g. [9, 10, 11]
             $minorPortions = array_map(fn($portions) => (int) explode('.', $portions)[1], $installerVersions);
             sort($minorPortions);
-            return $cmsMajor . '.' . $minorPortions[count($minorPortions) - 1] . '.x-dev';
+            $minorPortion = $minorPortions[count($minorPortions) - 1];
+            return $cmsMajor . '.' . $minorPortion . '.x-dev';
         }
     }
     
@@ -168,7 +169,7 @@ class JobCreator
         $key = str_replace('.x-dev', '', $this->installerVersion);
         $repo = explode('/', $this->githubRepository)[1];
         if (in_array($repo, NO_INSTALLER_LOCKSTEPPED_REPOS)) {
-            $cmsMajor = $this->getCmsMajorFromBranch();
+            $cmsMajor = $this->getCmsMajor();
             $branch = $this->getCleanedBranch();
             if (preg_match('#^[1-9]$#', $branch)) {
                 $key = $cmsMajor;
@@ -201,6 +202,16 @@ class JobCreator
         throw new Exception("No valid PHP version allowed");
     }
 
+    private function getCmsMajor(): string
+    {
+        $cmsMajor = $this->getCmsMajorFromBranch();
+        if ($cmsMajor == '') {
+            $cmsMajor = $this->getCmsMajorFromComposerJson();
+        }
+        // fallback to cms 4
+        return $cmsMajor ?: '4';
+    }
+
     private function getCmsMajorFromBranch(): string
     {
         $branch = $this->getCleanedBranch();
@@ -218,10 +229,44 @@ class JobCreator
                 }
             }
         }
-        // For CMS 5 support on pull-requests, will probably need to file_get_contents composer.json to see
-        // the version of framework, or other, required in composer.json
-        // For now, assuming CMS 4 should should be acceptable
-        return '4';
+        return '';
+    }
+
+    private function getCmsMajorFromComposerJson(): string
+    {
+        if (!file_exists($this->composerJsonPath)) {
+            return '';
+        }
+        $json = json_decode(file_get_contents($this->composerJsonPath));
+        foreach ($json->require as $dep => $version) {
+            // will match the first numeric character
+            if (!preg_match('#([0-9])#', $version, $m)) {
+                continue;
+            }
+            $composerVersionMajor = $m[1];
+            if (strpos($dep, '/') === false) {
+                continue;
+            }
+            $repo = '';
+            if (preg_match('#^silverstripe/recipe-#', $dep) ||
+                in_array($dep, [
+                'silverstripe/comment-notifications',
+                'silverstripe/MinkFacebookWebDriver',
+                'silverstripe/vendor-plugin',
+            ])) {
+                $repo = str_replace('silverstripe/', '', $dep);
+            } elseif (preg_match('#^(silverstripe|cwp)/#', $dep)) {
+                $repo = str_replace('/', '-', $dep);
+            }
+            foreach (array_keys(CMS_TO_REPO_MAJOR_VERSIONS) as $cmsMajor) {
+                if (isset(CMS_TO_REPO_MAJOR_VERSIONS[$cmsMajor][$repo])) {
+                    if (CMS_TO_REPO_MAJOR_VERSIONS[$cmsMajor][$repo] === $composerVersionMajor) {
+                        return $cmsMajor;
+                    }
+                }
+            }
+        }
+        return '';
     }
 
     private function getCleanedBranch(): string
@@ -344,7 +389,8 @@ class JobCreator
         }
         // endtoend / behat
         if ($run['endtoend'] && file_exists('behat.yml')) {
-            $graphql3 = !$simpleMatrix && $this->getCmsMajorFromBranch() == '4';
+            $cmsMajor = $this->getCmsMajor();
+            $graphql3 = !$simpleMatrix && $cmsMajor == '4';
             $job = $this->createJob(0, [
                 'endtoend' => true,
                 'endtoend_suite' => 'root',

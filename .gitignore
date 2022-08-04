@@ -1,2 +1,3 @@
 .phpunit.result.cache
 .cow.pat.json
+.vscode
