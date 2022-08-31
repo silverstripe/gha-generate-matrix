@@ -414,20 +414,23 @@ class JobCreatorTest extends TestCase
             github_my_ref: '$minorVersion'
             EOT
         ]);
-        $creator = new JobCreator();
-        $creator->composerJsonPath = '__composer.json';
-        $composer = new stdClass();
-        $composer->require = new stdClass();
-        if ($composerPhpConstraint) {
-            $composer->require->php = $composerPhpConstraint;
+        try {
+            $creator = new JobCreator();
+            $creator->composerJsonPath = '__composer.json';
+            $composer = new stdClass();
+            $composer->require = new stdClass();
+            if ($composerPhpConstraint) {
+                $composer->require->php = $composerPhpConstraint;
+            }
+            file_put_contents('__composer.json', json_encode($composer, JSON_PRETTY_PRINT + JSON_UNESCAPED_SLASHES));
+            $json = json_decode($creator->createJson($yml));
+            foreach ($json->include as $i => $job) {
+                $expectedPhp = $expectedPhps[$i];
+                $this->assertSame($expectedPhp, $job->php);
+            }
+        } finally {
+            unlink('__composer.json');
         }
-        file_put_contents('__composer.json', json_encode($composer, JSON_PRETTY_PRINT + JSON_UNESCAPED_SLASHES));
-        $json = json_decode($creator->createJson($yml));
-        foreach ($json->include as $i => $job) {
-            $expectedPhp = $expectedPhps[$i];
-            $this->assertSame($expectedPhp, $job->php);
-        }
-        unlink('__composer.json');
     }
 
     public function provideGetPhpVersion(): array
@@ -515,6 +518,108 @@ class JobCreatorTest extends TestCase
         return [
             ['4.10', '4.10.x-dev'],
             ['4.10.6', '4.10.x-dev'],
+        ];
+    }
+
+    /**
+     * @dataProvider provideGraphql3
+     */
+    public function testGraphql3(string $simpleMatrix, string $githubMyRef, array $jobsRequiresGraphql3): void
+    {
+        if (!function_exists('yaml_parse')) {
+            $this->markTestSkipped('yaml extension is not installed');
+        }
+        $yml = implode("\n", [
+            $this->getGenericYml(),
+            // using silverstripe/recipe-cms because it there is currently support it for getting the
+            // major version of installer set based on github_my_ref
+            <<<EOT
+            github_repository: 'silverstripe/recipe-cms'
+            github_my_ref: '$githubMyRef'
+            simple_matrix: $simpleMatrix
+            EOT
+        ]);
+        try {
+            // create a temporary fake behat.yml file so that the dynamic matrix include endtoend jobs
+            file_put_contents('behat.yml', '');
+            $creator = new JobCreator();
+            $json = json_decode($creator->createJson($yml));
+            $j = 0;
+            foreach ($json->include as $job) {
+                if ($job->endtoend == 'false') {
+                    continue;
+                }
+                $b = !$jobsRequiresGraphql3[$j];
+                $this->assertTrue(strpos($job->composer_require_extra, 'silverstripe/graphql:^3') !== $b);
+                $j++;
+            }
+        } finally {
+            unlink('behat.yml');
+        }
+    }
+
+    public function provideGraphql3(): array
+    {
+        return [
+            ['false', '4.11', [true, false]],
+            ['true', '4.11', [false]],
+            ['false', '5.0', [false, false]],
+            ['true', '5.0', [false]],
+        ];
+    }
+
+    /**
+     * @dataProvider provideGetInstallerVersionCMS5FromComposer
+     */
+    public function testGetInstallerVersionCMS5FromComposer(
+        string $githubRepository,
+        string $branch,
+        array $composerDeps,
+        string $expected
+    ): void {
+        if (!function_exists('yaml_parse')) {
+            $this->markTestSkipped('yaml extension is not installed');
+        }
+        $yml = implode("\n", [
+            $this->getGenericYml(),
+            <<<EOT
+            github_repository: '$githubRepository'
+            github_my_ref: '$branch'
+            EOT
+        ]);
+        try {
+            $creator = new JobCreator();
+            $creator->composerJsonPath = '__composer.json';
+            $composer = new stdClass();
+            $composer->require = new stdClass();
+            foreach ($composerDeps as $dep => $version) {
+                $composer->require->{$dep} = $version;
+            }
+            file_put_contents('__composer.json', json_encode($composer, JSON_PRETTY_PRINT + JSON_UNESCAPED_SLASHES));
+            $json = json_decode($creator->createJson($yml));
+            $this->assertSame($expected, $json->include[0]->installer_version);
+        } finally {
+            unlink('__composer.json');
+        }
+    }
+
+    public function provideGetInstallerVersionCMS5FromComposer(): array
+    {
+        $currentMinor = $this->getCurrentMinorInstallerVersion('4') . '.x-dev';
+        return [
+            // priority given to branch name
+            ['myaccount/silverstripe-framework', '4', [], '4.x-dev'],
+            ['myaccount/silverstripe-framework', '4.10', [], '4.10.x-dev'],
+            ['myaccount/silverstripe-framework', 'burger', [], $currentMinor],
+            ['myaccount/silverstripe-framework', '5', [], '5.x-dev'],
+            ['myaccount/silverstripe-framework', '5.10', [], '5.10.x-dev'],
+            // fallback to looking at deps in composer.json, use current minor of installer .x-dev
+            ['myaccount/silverstripe-admin', 'mybranch', ['silverstripe/framework' => '5.x-dev'], '5.0.x-dev'],
+            ['myaccount/silverstripe-admin', 'mybranch', ['silverstripe/framework' => '5.0.x-dev'], '5.0.x-dev'],
+            ['myaccount/silverstripe-admin', 'mybranch', ['silverstripe/framework' => '^5'], '5.0.x-dev'],
+            ['myaccount/silverstripe-somemodule', 'mybranch', ['silverstripe/cms' => '^5'], '5.0.x-dev'],
+            ['myaccount/silverstripe-somemodule', 'mybranch', ['silverstripe/admin' => '^2'], '5.0.x-dev'],
+            ['myaccount/silverstripe-somemodule', '3', ['silverstripe/framework' => '^5'], '5.x-dev'],
         ];
     }
 }
