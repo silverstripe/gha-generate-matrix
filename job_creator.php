@@ -320,7 +320,7 @@ class JobCreator
             // this same mysql pdo test is also created for the phpcoverage job, so only add it here if
             // not creating a phpcoverage job.
             // note: phpcoverage also runs unit tests
-            if (!$this->doRunPhpCoverage($run)) {
+            if ($this->getCmsMajor() === '4' && !$this->doRunPhpCoverage($run)) {
                 $matrix['include'][] = $this->createJob(2, [
                     'db' => DB_MYSQL_57_PDO,
                     'phpunit' => true,
@@ -376,7 +376,7 @@ class JobCreator
         }
         // phpcoverage also runs unit tests
         if ($this->doRunPhpCoverage($run, $this->githubRepository)) {
-            if ($simpleMatrix) {
+            if ($simpleMatrix || $this->getCmsMajor() !== '4') {
                 $matrix['include'][] = $this->createJob(0, [
                     'phpcoverage' => true
                 ]);
