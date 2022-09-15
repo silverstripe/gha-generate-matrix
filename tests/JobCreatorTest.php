@@ -160,7 +160,7 @@ class JobCreatorTest extends TestCase
     public function provideCreateJson(): array
     {
         return [
-            // general test
+            // general test for v4
             [
                 implode("\n", [
                     $this->getGenericYml(),
@@ -224,6 +224,70 @@ class JobCreatorTest extends TestCase
                     ],
                     [
                         'installer_version' => '4.11.x-dev',
+                        'php' => '8.1',
+                        'db' => DB_MYSQL_80,
+                        'composer_require_extra' => '',
+                        'composer_args' => '',
+                        'name_suffix' => '',
+                        'phpunit' => 'true',
+                        'phpunit_suite' => 'all',
+                        'phplinting' => 'false',
+                        'phpcoverage' => 'false',
+                        'endtoend' => 'false',
+                        'endtoend_suite' => 'root',
+                        'endtoend_config' => '',
+                        'js' => 'false',
+                        'name' => '8.1 mysql80 phpunit all',
+                    ],
+                ]
+            ],
+            // general test for v5
+            [
+                implode("\n", [
+                    $this->getGenericYml(),
+                    <<<EOT
+                    github_repository: 'myaccount/silverstripe-framework'
+                    github_my_ref: '5'
+                    parent_branch: ''
+                    EOT
+                ]),
+                [
+                    [
+                        'installer_version' => '5.x-dev',
+                        'php' => '8.1',
+                        'db' => DB_MYSQL_57,
+                        'composer_require_extra' => '',
+                        'composer_args' => '--prefer-lowest',
+                        'name_suffix' => '',
+                        'phpunit' => 'true',
+                        'phpunit_suite' => 'all',
+                        'phplinting' => 'false',
+                        'phpcoverage' => 'false',
+                        'endtoend' => 'false',
+                        'endtoend_suite' => 'root',
+                        'endtoend_config' => '',
+                        'js' => 'false',
+                        'name' => '8.1 prf-low mysql57 phpunit all',
+                    ],
+                    [
+                        'installer_version' => '5.x-dev',
+                        'php' => '8.1',
+                        'db' => DB_PGSQL,
+                        'composer_require_extra' => '',
+                        'composer_args' => '',
+                        'name_suffix' => '',
+                        'phpunit' => 'true',
+                        'phpunit_suite' => 'all',
+                        'phplinting' => 'false',
+                        'phpcoverage' => 'false',
+                        'endtoend' => 'false',
+                        'endtoend_suite' => 'root',
+                        'endtoend_config' => '',
+                        'js' => 'false',
+                        'name' => '8.1 pgsql phpunit all',
+                    ],
+                    [
+                        'installer_version' => '5.x-dev',
                         'php' => '8.1',
                         'db' => DB_MYSQL_80,
                         'composer_require_extra' => '',
