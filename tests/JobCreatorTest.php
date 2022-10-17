@@ -191,23 +191,6 @@ class JobCreatorTest extends TestCase
                     [
                         'installer_version' => '4.11.x-dev',
                         'php' => '8.0',
-                        'db' => DB_PGSQL,
-                        'composer_require_extra' => '',
-                        'composer_args' => '',
-                        'name_suffix' => '',
-                        'phpunit' => 'true',
-                        'phpunit_suite' => 'all',
-                        'phplinting' => 'false',
-                        'phpcoverage' => 'false',
-                        'endtoend' => 'false',
-                        'endtoend_suite' => 'root',
-                        'endtoend_config' => '',
-                        'js' => 'false',
-                        'name' => '8.0 pgsql phpunit all',
-                    ],
-                    [
-                        'installer_version' => '4.11.x-dev',
-                        'php' => '8.1',
                         'db' => DB_MYSQL_57_PDO,
                         'composer_require_extra' => '',
                         'composer_args' => '',
@@ -220,7 +203,7 @@ class JobCreatorTest extends TestCase
                         'endtoend_suite' => 'root',
                         'endtoend_config' => '',
                         'js' => 'false',
-                        'name' => '8.1 mysql57pdo phpunit all',
+                        'name' => '8.0 mysql57pdo phpunit all',
                     ],
                     [
                         'installer_version' => '4.11.x-dev',
@@ -268,23 +251,6 @@ class JobCreatorTest extends TestCase
                         'endtoend_config' => '',
                         'js' => 'false',
                         'name' => '8.1 prf-low mysql57 phpunit all',
-                    ],
-                    [
-                        'installer_version' => '5.x-dev',
-                        'php' => '8.1',
-                        'db' => DB_PGSQL,
-                        'composer_require_extra' => '',
-                        'composer_args' => '',
-                        'name_suffix' => '',
-                        'phpunit' => 'true',
-                        'phpunit_suite' => 'all',
-                        'phplinting' => 'false',
-                        'phpcoverage' => 'false',
-                        'endtoend' => 'false',
-                        'endtoend_suite' => 'root',
-                        'endtoend_config' => '',
-                        'js' => 'false',
-                        'name' => '8.1 pgsql phpunit all',
                     ],
                     [
                         'installer_version' => '5.x-dev',
@@ -549,9 +515,9 @@ class JobCreatorTest extends TestCase
     public function provideDynamicMatrix(): array
     {
         return [
-            ['true', 4],
+            ['true', 3],
             ['false', 0],
-            ['', 4],
+            ['', 3],
         ];
     }
 
