@@ -2,6 +2,10 @@ name: Generate Matrix
 description: GitHub Action to create a dynamic Silverstripe CI matrix
 
 inputs:
+  composer_install:
+    type: boolean
+    required: false
+    default: false
   # extra jobs must be multi-line string, as there's no support for type: array for inputs
   extra_jobs:
     type: string
@@ -113,6 +117,7 @@ runs:
         PARENT_BRANCH=$(git show-branch -a 2>/dev/null | { grep '\*' || :; } | { grep -v `git rev-parse --abbrev-ref HEAD` || :; } | head -n1 | sed 's/.*\[\(.*\)\].*/\1/' | sed 's/[\^~].*//')
         # create __inputs.yml
         touch __inputs.yml
+        echo "composer_install: ${{ inputs.composer_install }}" >> __inputs.yml
         echo "endtoend: ${{ inputs.endtoend }}" >> __inputs.yml
         echo "js: ${{ inputs.js }}" >> __inputs.yml
         echo "phpcoverage: ${{ inputs.phpcoverage }}" >> __inputs.yml

@@ -14,6 +14,8 @@ class JobCreator
 
     private ?string $composerPhpConstraint = '';
 
+    private string $phpVersionOverride = '';
+
     /**
      * Get the correct version of silverstripe/installer to include for the given repository and branch
      */
@@ -76,6 +78,7 @@ class JobCreator
             'db' => DB_MYSQL_57,
             'composer_require_extra' => '',
             'composer_args' => '',
+            'composer_install' => false,
             'name_suffix' => '',
             'phpunit' => false,
             'phpunit_suite' => 'all',
@@ -166,6 +169,9 @@ class JobCreator
 
     private function getPhpVersion(int $phpIndex): string
     {
+        if ($this->phpVersionOverride) {
+            return $this->phpVersionOverride;
+        }
         $key = str_replace('.x-dev', '', $this->installerVersion);
         $repo = explode('/', $this->githubRepository)[1];
         if (in_array($repo, NO_INSTALLER_LOCKSTEPPED_REPOS)) {
@@ -297,11 +303,12 @@ class JobCreator
 
     private function createPhpunitJobs(
         array $matrix,
+        bool $composerInstall,
         bool $simpleMatrix,
         string $suite,
         array $run
     ): array {
-        if ($simpleMatrix) {
+        if ($simpleMatrix || $composerInstall) {
             $matrix['include'][] = $this->createJob(0, [
                 'phpunit' => true,
                 'phpunit_suite' => $suite,
@@ -343,6 +350,7 @@ class JobCreator
     private function buildDynamicMatrix(
         array $matrix,
         array $run,
+        bool $composerInstall,
         bool $simpleMatrix
     ): array {
         if ($run['phpunit'] && (file_exists('phpunit.xml') || file_exists('phpunit.xml.dist'))) {
@@ -356,11 +364,11 @@ class JobCreator
                     continue;
                 }
                 $suite = $testsuite->getAttribute('name');
-                $matrix = $this->createPhpunitJobs($matrix, $simpleMatrix, $suite, $run);
+                $matrix = $this->createPhpunitJobs($matrix, $composerInstall, $simpleMatrix, $suite, $run);
             }
             // phpunit.xml has no defined testsuites, or only defaults a "Default"
             if (count($matrix['include']) == 0) {
-                $matrix = $this->createPhpunitJobs($matrix, $simpleMatrix, 'all', $run);
+                $matrix = $this->createPhpunitJobs($matrix, $composerInstall, $simpleMatrix, 'all', $run);
             }
         }
         // skip phpcs on silverstripe-installer which include sample file for use in projects
@@ -371,7 +379,7 @@ class JobCreator
         }
         // phpcoverage also runs unit tests
         if ($this->doRunPhpCoverage($run, $this->githubRepository)) {
-            if ($simpleMatrix || $this->getCmsMajor() !== '4') {
+            if ($simpleMatrix || $composerInstall || $this->getCmsMajor() !== '4') {
                 $matrix['include'][] = $this->createJob(0, [
                     'phpcoverage' => true
                 ]);
@@ -400,7 +408,7 @@ class JobCreator
                 $job['php'] = '7.4';
             }
             $matrix['include'][] = $job;
-            if (!$simpleMatrix) {
+            if (!$simpleMatrix && !$composerInstall) {
                 $matrix['include'][] = $this->createJob(3, [
                     'db' => DB_MYSQL_80,
                     'endtoend' => true,
@@ -457,6 +465,7 @@ class JobCreator
 
         $run = [];
         $extraJobs = [];
+        $composerInstall = false;
         $dynamicMatrix = true;
         $simpleMatrix = false;
         foreach ($inputs as $input => $value) {
@@ -474,6 +483,8 @@ class JobCreator
                     $value = [];
                 }
                 $extraJobs = $value;
+            } else if ($input === 'composer_install') {
+                $composerInstall = $this->parseBoolValue($value);
             } else if ($input === 'dynamic_matrix') {
                 $dynamicMatrix = $this->parseBoolValue($value);
             } else if ($input === 'simple_matrix') {
@@ -486,8 +497,15 @@ class JobCreator
         }
         $matrix = ['include' => []];
 
+        if ($composerInstall) {
+            $json = json_decode(file_get_contents($this->composerJsonPath));
+            if (isset($json->config->platform->php) && preg_match('#^[0-9\.]+$#', $json->config->platform->php)) {
+                $this->phpVersionOverride = $json->config->platform->php;
+            }
+        }
+
         if ($dynamicMatrix) {
-            $matrix = $this->buildDynamicMatrix($matrix, $run, $simpleMatrix);
+            $matrix = $this->buildDynamicMatrix($matrix, $run, $composerInstall, $simpleMatrix);
         }
 
         // extra jobs

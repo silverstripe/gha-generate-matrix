@@ -33,6 +33,7 @@ class JobCreatorTest extends TestCase
                 'db' => DB_MYSQL_57,
                 'composer_require_extra' => '',
                 'composer_args' => '',
+                'composer_install' => false,
                 'name_suffix' => '',
                 'phpunit' => true,
                 'phpunit_suite' => 'all',
@@ -177,6 +178,7 @@ class JobCreatorTest extends TestCase
                         'db' => DB_MYSQL_57,
                         'composer_require_extra' => '',
                         'composer_args' => '--prefer-lowest',
+                        'composer_install' => 'false',
                         'name_suffix' => '',
                         'phpunit' => 'true',
                         'phpunit_suite' => 'all',
@@ -194,6 +196,7 @@ class JobCreatorTest extends TestCase
                         'db' => DB_MYSQL_57_PDO,
                         'composer_require_extra' => '',
                         'composer_args' => '',
+                        'composer_install' => 'false',
                         'name_suffix' => '',
                         'phpunit' => 'true',
                         'phpunit_suite' => 'all',
@@ -211,6 +214,7 @@ class JobCreatorTest extends TestCase
                         'db' => DB_MYSQL_80,
                         'composer_require_extra' => '',
                         'composer_args' => '',
+                        'composer_install' => 'false',
                         'name_suffix' => '',
                         'phpunit' => 'true',
                         'phpunit_suite' => 'all',
@@ -297,6 +301,7 @@ class JobCreatorTest extends TestCase
         phplinting: true
         phpunit: true
         simple_matrix: false
+        composer_install: false
         EOT;
     }
 
@@ -372,6 +377,7 @@ class JobCreatorTest extends TestCase
                     'phplinting' => true,
                     'phpunit' => true,
                     'simple_matrix' => false,
+                    'composer_install' => false,
                     'github_repository' => 'myaccount/silverstripe-versioned',
                     'github_my_ref'=> 'pulls/1.10/module-standards'
                 ]
@@ -650,6 +656,119 @@ class JobCreatorTest extends TestCase
             ['myaccount/silverstripe-somemodule', 'mybranch', ['silverstripe/cms' => '^5'], '5.0.x-dev'],
             ['myaccount/silverstripe-somemodule', 'mybranch', ['silverstripe/admin' => '^2'], '5.0.x-dev'],
             ['myaccount/silverstripe-somemodule', '3', ['silverstripe/framework' => '^5'], '5.x-dev'],
+        ];
+    }
+
+    /**
+     * @dataProvider provideComposerInstall
+     */
+    public function testComposerInstall(
+        string $composerInstall,
+        string $configPlatformPhp,
+        string $frameworkVersion,
+        array $expected
+    ): void {
+        $yml = implode("\n", [
+            str_replace('composer_install: false', 'composer_install: ' . $composerInstall, $this->getGenericYml()),
+            <<<EOT
+            github_repository: 'silverstripe/installer'
+            github_my_ref: 'mybranch'
+            EOT
+        ]);
+        try {
+            $creator = new JobCreator();
+            $creator->composerJsonPath = '__composer.json';
+            $composer = new stdClass();
+            $composer->require = new stdClass();
+            $composer->require->{'silverstripe/framework'} = $frameworkVersion;
+            if ($configPlatformPhp) {
+                $composer->config = new stdClass();
+                $composer->config->platform = new stdClass();
+                $composer->config->platform->php = $configPlatformPhp;
+            }
+            file_put_contents('__composer.json', json_encode($composer, JSON_PRETTY_PRINT + JSON_UNESCAPED_SLASHES));
+            $json = json_decode($creator->createJson($yml));
+            $actual = array_map(function ($include) {
+                return $include->name;
+            }, $json->include);
+            $this->assertSame($expected, $actual);
+        } finally {
+            unlink('__composer.json');
+        }
+    }
+
+    public function provideComposerInstall(): array
+    {
+        return [
+            'composerinstall_nophpversion_framework4' => [
+                'true',
+                '',
+                '4.x-dev',
+                [
+                    '7.4 mysql57 phpunit all'
+                ]
+            ],
+            'composerinstall_nophpversion_framework5' => [
+                'true',
+                '',
+                '5.x-dev',
+                [
+                    '8.1 mysql57 phpunit all'
+                ]
+            ],
+            'composerinstall_definedphpversion_framework5' => [
+                'true',
+                '21.99',
+                '5.x-dev',
+                [
+                    '21.99 mysql57 phpunit all'
+                ]
+            ],
+            'composerinstall_invalidphpversion_framework5' => [
+                'true',
+                'fish',
+                '5.x-dev',
+                [
+                    '8.1 mysql57 phpunit all'
+                ]
+            ],
+            'composerupgrade_nophpversion_framework4' => [
+                'false',
+                '',
+                '4.x-dev',
+                [
+                    '7.4 prf-low mysql57 phpunit all',
+                    '8.0 mysql57pdo phpunit all',
+                    '8.1 mysql80 phpunit all'
+                ]
+            ],
+            'composerupgrade_nophpversion_framework5' => [
+                'false',
+                '',
+                '5.x-dev',
+                [
+                    '8.1 prf-low mysql57 phpunit all',
+                    '8.1 mysql80 phpunit all'
+                ]
+            ],
+            'composerupgrade_definedphpversion_framework5' => [
+                'false',
+                '21.99',
+                '5.x-dev',
+                [
+                    '8.1 prf-low mysql57 phpunit all',
+                    '8.1 mysql80 phpunit all'
+                ]
+            ],
+            'composerupgrade_invalidphpversion_framework5' => [
+                'false',
+                'fish',
+                '5.x-dev',
+                [
+                    '8.1 prf-low mysql57 phpunit all',
+                    '8.1 mysql80 phpunit all'
+                ]
+            ],
         ];
     }
 }
