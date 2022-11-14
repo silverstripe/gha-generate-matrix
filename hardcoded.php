@@ -50,3 +50,12 @@ ksort($versions);
 foreach ($versions as $repoName => $version) {
     echo "        '$repoName' => '$version',\n";
 }
+
+// Find any repositories which were in the previous version that aren't in this one
+$missing = array_diff(array_keys(INSTALLER_TO_REPO_MINOR_VERSIONS[array_key_last(INSTALLER_TO_REPO_MINOR_VERSIONS)]), array_keys($versions));
+if (!empty($missing)) {
+    $formatColor = "\033[31m";
+    $endFormat = "\033[0m";
+    echo "\n" . $formatColor . 'Warning: The following modules were in the last release in INSTALLER_TO_REPO_MINOR_VERSIONS but are missing from .cow.pat.json:' . $endFormat . "\n";
+    echo implode("\n", $missing) . "\n";
+}
