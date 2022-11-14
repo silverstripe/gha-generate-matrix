@@ -328,5 +328,6 @@ const INSTALLER_TO_REPO_MINOR_VERSIONS = [
         'silverstripe-versionfeed' => '2.3',
         'silverstripe-webauthn-authenticator' => '4.6',
         'silverstripe-widgets' => '2.3',
+        'silverstripe-gridfieldextensions' => '3.5',
     ],
 ];
