@@ -26,10 +26,14 @@ class JobCreator
         if (in_array($repo, NO_INSTALLER_LOCKSTEPPED_REPOS) || in_array($repo, NO_INSTALLER_UNLOCKSTEPPED_REPOS)) {
             return '';
         }
-        $branch = $this->getCleanedBranch();
+        $branch = $this->getCleanedBranch(true);
+        $isReleaseBranch = preg_match('#^[0-9\.]+-release$#', $branch);
         $cmsMajor = $this->getCmsMajor();
         // repo is a lockstepped repo
-        if (in_array($repo, LOCKSTEPPED_REPOS) && is_numeric($branch)) {
+        if (in_array($repo, LOCKSTEPPED_REPOS) && (is_numeric($branch) || $isReleaseBranch)) {
+            if ($isReleaseBranch) {
+                return 'dev-' . preg_replace('#^([0-9])#', $cmsMajor, $branch);
+            }
             // e.g. ['4', '11']
             $portions = explode('.', $branch);
             if (count($portions) == 1) {
@@ -43,7 +47,10 @@ class JobCreator
             foreach (INSTALLER_TO_REPO_MINOR_VERSIONS[$installerVersion] as $_repo => $_repoVersions) {
                 $repoVersions = is_array($_repoVersions) ? $_repoVersions : [$_repoVersions];
                 foreach ($repoVersions as $repoVersion) {
-                    if ($repo === $_repo && $repoVersion === $branch) {
+                    if ($repo === $_repo && $repoVersion === preg_replace('#-release$#', '', $branch)) {
+                        if ($isReleaseBranch) {
+                            return 'dev-' . $installerVersion . '-release';
+                        }
                         return $installerVersion . '.x-dev';
                     }
                 }
@@ -63,7 +70,11 @@ class JobCreator
             $minorPortions = array_map(fn($portions) => (int) explode('.', $portions)[1], $installerVersions);
             sort($minorPortions);
             $minorPortion = $minorPortions[count($minorPortions) - 1];
-            return $cmsMajor . '.' . $minorPortion . '.x-dev';
+            $installerVersion = $cmsMajor . '.' . $minorPortion;
+            if ($isReleaseBranch) {
+                return 'dev-' . $installerVersion . '-release';
+            }
+            return $installerVersion . '.x-dev';
         }
     }
     
@@ -275,12 +286,12 @@ class JobCreator
         return '';
     }
 
-    private function getCleanedBranch(): string
+    private function getCleanedBranch(bool $allowReleaseSuffix = false): string
     {
         $branch = $this->branch;
         // e.g. pulls/4.10/some-bugfix or pulls/4/some-feature
         // for push events to the creative-commoners account
-        if (preg_match('#^pulls/([0-9\.]+)/#', $branch, $matches)) {
+        if (preg_match('#^pulls/([0-9\.]+(-release)?)/#', $branch, $matches)) {
             $branch = $matches[1];
         }
         // fallback to parent branch if available
@@ -292,7 +303,9 @@ class JobCreator
             $branch = $this->parentBranch;
         }
         // e.g. 4.10-release
-        $branch = preg_replace('#^([0-9\.]+)-release$#', '$1', $branch);
+        if (!$allowReleaseSuffix) {
+            $branch = preg_replace('#^([0-9\.]+)-release$#', '$1', $branch);
+        }
         return $branch;
     }
     
