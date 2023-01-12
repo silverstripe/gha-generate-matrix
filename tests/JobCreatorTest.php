@@ -244,23 +244,23 @@ class JobCreatorTest extends TestCase
                     EOT
                 ]),
                 [
-                    [
-                        'installer_version' => '5.x-dev',
-                        'php' => '8.1',
-                        'db' => DB_MYSQL_57,
-                        'composer_require_extra' => '',
-                        'composer_args' => '--prefer-lowest',
-                        'name_suffix' => '',
-                        'phpunit' => 'true',
-                        'phpunit_suite' => 'all',
-                        'phplinting' => 'false',
-                        'phpcoverage' => 'false',
-                        'endtoend' => 'false',
-                        'endtoend_suite' => 'root',
-                        'endtoend_config' => '',
-                        'js' => 'false',
-                        'name' => '8.1 prf-low mysql57 phpunit all',
-                    ],
+                    // [
+                    //     'installer_version' => '5.x-dev',
+                    //     'php' => '8.1',
+                    //     'db' => DB_MYSQL_57,
+                    //     'composer_require_extra' => '',
+                    //     'composer_args' => '--prefer-lowest',
+                    //     'name_suffix' => '',
+                    //     'phpunit' => 'true',
+                    //     'phpunit_suite' => 'all',
+                    //     'phplinting' => 'false',
+                    //     'phpcoverage' => 'false',
+                    //     'endtoend' => 'false',
+                    //     'endtoend_suite' => 'root',
+                    //     'endtoend_config' => '',
+                    //     'js' => 'false',
+                    //     'name' => '8.1 prf-low mysql57 phpunit all',
+                    // ],
                     [
                         'installer_version' => '5.x-dev',
                         'php' => '8.1',
@@ -752,7 +752,7 @@ class JobCreatorTest extends TestCase
                 '',
                 '5.x-dev',
                 [
-                    '8.1 prf-low mysql57 phpunit all',
+                    // '8.1 prf-low mysql57 phpunit all',
                     '8.1 mysql80 phpunit all'
                 ]
             ],
@@ -761,7 +761,7 @@ class JobCreatorTest extends TestCase
                 '21.99',
                 '5.x-dev',
                 [
-                    '8.1 prf-low mysql57 phpunit all',
+                    // '8.1 prf-low mysql57 phpunit all',
                     '8.1 mysql80 phpunit all'
                 ]
             ],
@@ -770,7 +770,7 @@ class JobCreatorTest extends TestCase
                 'fish',
                 '5.x-dev',
                 [
-                    '8.1 prf-low mysql57 phpunit all',
+                    // '8.1 prf-low mysql57 phpunit all',
                     '8.1 mysql80 phpunit all'
                 ]
             ],
