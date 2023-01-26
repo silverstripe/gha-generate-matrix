@@ -345,11 +345,24 @@ class JobCreator
                     'phpunit_suite' => $suite,
                 ]);
             }
-            $matrix['include'][] = $this->createJob(3, [
-                'db' => DB_MYSQL_80,
-                'phpunit' => true,
-                'phpunit_suite' => $suite,
-            ]);
+            if ($this->getCmsMajor() === '4') {
+                $matrix['include'][] = $this->createJob(3, [
+                    'db' => DB_MYSQL_80,
+                    'phpunit' => true,
+                    'phpunit_suite' => $suite,
+                ]);
+            } elseif ($this->getCmsMajor() === '5') {
+                $matrix['include'][] = $this->createJob(0, [
+                    'db' => DB_MYSQL_57,
+                    'phpunit' => true,
+                    'phpunit_suite' => $suite,
+                ]);
+                $matrix['include'][] = $this->createJob(1, [
+                    'db' => DB_MYSQL_80,
+                    'phpunit' => true,
+                    'phpunit_suite' => $suite,
+                ]);
+            }
         }
         return $matrix;
     }

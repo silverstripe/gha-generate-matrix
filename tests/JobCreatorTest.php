@@ -264,6 +264,23 @@ class JobCreatorTest extends TestCase
                     [
                         'installer_version' => '5.x-dev',
                         'php' => '8.1',
+                        'db' => DB_MYSQL_57,
+                        'composer_require_extra' => '',
+                        'composer_args' => '',
+                        'name_suffix' => '',
+                        'phpunit' => 'true',
+                        'phpunit_suite' => 'all',
+                        'phplinting' => 'false',
+                        'phpcoverage' => 'false',
+                        'endtoend' => 'false',
+                        'endtoend_suite' => 'root',
+                        'endtoend_config' => '',
+                        'js' => 'false',
+                        'name' => '8.1 mysql57 phpunit all',
+                    ],
+                    [
+                        'installer_version' => '5.x-dev',
+                        'php' => '8.2',
                         'db' => DB_MYSQL_80,
                         'composer_require_extra' => '',
                         'composer_args' => '',
@@ -276,7 +293,7 @@ class JobCreatorTest extends TestCase
                         'endtoend_suite' => 'root',
                         'endtoend_config' => '',
                         'js' => 'false',
-                        'name' => '8.1 mysql80 phpunit all',
+                        'name' => '8.2 mysql80 phpunit all',
                     ],
                 ]
             ],
@@ -753,7 +770,8 @@ class JobCreatorTest extends TestCase
                 '5.x-dev',
                 [
                     // '8.1 prf-low mysql57 phpunit all',
-                    '8.1 mysql80 phpunit all'
+                    '8.1 mysql57 phpunit all',
+                    '8.2 mysql80 phpunit all'
                 ]
             ],
             'composerupgrade_definedphpversion_framework5' => [
@@ -762,7 +780,8 @@ class JobCreatorTest extends TestCase
                 '5.x-dev',
                 [
                     // '8.1 prf-low mysql57 phpunit all',
-                    '8.1 mysql80 phpunit all'
+                    '8.1 mysql57 phpunit all',
+                    '8.2 mysql80 phpunit all'
                 ]
             ],
             'composerupgrade_invalidphpversion_framework5' => [
@@ -771,7 +790,8 @@ class JobCreatorTest extends TestCase
                 '5.x-dev',
                 [
                     // '8.1 prf-low mysql57 phpunit all',
-                    '8.1 mysql80 phpunit all'
+                    '8.1 mysql57 phpunit all',
+                    '8.2 mysql80 phpunit all'
                 ]
             ],
         ];
