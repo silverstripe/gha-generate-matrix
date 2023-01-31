@@ -80,6 +80,7 @@ const NO_INSTALLER_UNLOCKSTEPPED_REPOS = [
     'vendor-plugin',
     'recipe-plugin',
     'api.silverstripe.org',
+    'cow'
 ];
 
 const CMS_TO_REPO_MAJOR_VERSIONS = [
