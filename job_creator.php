@@ -327,14 +327,11 @@ class JobCreator
                 'phpunit_suite' => $suite,
             ]);
         } else {
-            // disabling --prefer-lowest build in CMS 5 until 5.0.0 stable is released
-            if ($this->getCmsMajor() === '4') {
-                $matrix['include'][] = $this->createJob(0, [
-                    'composer_args' => '--prefer-lowest',
-                    'phpunit' => true,
-                    'phpunit_suite' => $suite,
-                ]);
-            }
+            $matrix['include'][] = $this->createJob(0, [
+                'composer_args' => '--prefer-lowest',
+                'phpunit' => true,
+                'phpunit_suite' => $suite,
+            ]);
             // this same mysql pdo test is also created for the phpcoverage job, so only add it here if
             // not creating a phpcoverage job.
             // note: phpcoverage also runs unit tests
