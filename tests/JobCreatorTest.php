@@ -576,7 +576,7 @@ class JobCreatorTest extends TestCase
         return [
             ['4.10', '4.10.x-dev'],
             ['4.10.6', '4.10.x-dev'],
-            ['5.0.0-beta1', '5.0.x-dev'],
+            ['5.0.0-beta2', '5.0.0-beta1'],
         ];
     }
 
