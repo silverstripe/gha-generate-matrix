@@ -80,7 +80,8 @@ const NO_INSTALLER_UNLOCKSTEPPED_REPOS = [
     'vendor-plugin',
     'recipe-plugin',
     'api.silverstripe.org',
-    'cow'
+    'cow',
+    'silverstripe-config',
 ];
 
 const CMS_TO_REPO_MAJOR_VERSIONS = [
@@ -120,7 +121,6 @@ const CMS_TO_REPO_MAJOR_VERSIONS = [
         'silverstripe-behat-extension' => '5',
         'silverstripe-campaign-admin' => '2',
         'silverstripe-cms' => '5',
-        'silverstripe-config' => '2',
         'silverstripe-errorpage' => '2',
         'silverstripe-event-dispatcher' => '1',
         'silverstripe-framework' => '5',
@@ -159,7 +159,6 @@ const INSTALLER_TO_REPO_MINOR_VERSIONS = [
         'silverstripe-ckan-registry' => '1.4',
         'silverstripe-comments' => '3.7',
         'silverstripe-composer-update-checker' => '2.1',
-        'silverstripe-config' => '1.3',
         'silverstripe-content-widget' => '2.3',
         'silverstripe-contentreview' => '4.4',
         'silverstripe-crontask' => '2.4',
@@ -222,7 +221,6 @@ const INSTALLER_TO_REPO_MINOR_VERSIONS = [
         'silverstripe-ckan-registry' => '1.5',
         'silverstripe-comments' => '3.8',
         'silverstripe-composer-update-checker' => '3.0',
-        'silverstripe-config' => '1.4',
         'silverstripe-content-widget' => '2.4',
         'silverstripe-contentreview' => '4.5',
         'silverstripe-crontask' => '2.5',
@@ -285,7 +283,6 @@ const INSTALLER_TO_REPO_MINOR_VERSIONS = [
         'silverstripe-ckan-registry' => '1.6',
         'silverstripe-comments' => '3.9',
         'silverstripe-composer-update-checker' => '3.0',
-        'silverstripe-config' => '1.5',
         'silverstripe-content-widget' => '2.4',
         'silverstripe-contentreview' => '4.6',
         'silverstripe-crontask' => '2.5',
@@ -347,7 +344,6 @@ const INSTALLER_TO_REPO_MINOR_VERSIONS = [
         'silverstripe-ckan-registry' => '2.0',
         'silverstripe-comments' => '4.0',
         'silverstripe-composer-update-checker' => '4.0',
-        'silverstripe-config' => '2.0',
         'silverstripe-content-widget' => '3.0',
         'silverstripe-contentreview' => '5.0',
         'silverstripe-crontask' => '3.0',
