@@ -477,7 +477,8 @@ class JobCreator
         $inputs = $this->getInputs($yml);
         // $myRef will either be a branch for push (i.e cron) and pull-request (target branch), or a semver tag
         $myRef = $inputs['github_my_ref'];
-        $isTag = preg_match('#^([0-9]+)\.([0-9]+)\.[0-9]+$#', $myRef, $m);
+        $unstableTagRx = '#^([0-9]+)\.([0-9]+)\.[0-9]+-((alpha|beta|rc))[0-9]+$#';
+        $isTag = preg_match('#^([0-9]+)\.([0-9]+)\.[0-9]+$#', $myRef, $m) || preg_match($unstableTagRx, $myRef, $m);
         $this->branch = $isTag ? sprintf('%d.%d', $m[1], $m[2]) : $myRef;
 
         // parent branch is a best attempt to get the parent branch of the branch via bash
@@ -488,6 +489,9 @@ class JobCreator
 
         $this->githubRepository = $inputs['github_repository'];
         $this->installerVersion = $this->getInstallerVersion();
+        if (preg_match($unstableTagRx, $myRef, $m)) {
+            $this->installerVersion = str_replace('.x-dev', '.0-' . $m[3] . '1', $this->installerVersion);
+        }
 
         $run = [];
         $extraJobs = [];
