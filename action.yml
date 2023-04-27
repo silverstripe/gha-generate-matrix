@@ -81,7 +81,7 @@ runs:
           fi
         fi
         echo "FETCH_DEPTH is $FETCH_DEPTH"
-        echo "::set-output name=fetch-depth::$FETCH_DEPTH"
+        echo "fetch-depth=$FETCH_DEPTH" >> "$GITHUB_OUTPUT"
 
     - name: Checkout code
       uses: actions/checkout@7884fcad6b5d53d10323aee724dc68d8b9096a2e # v2.4.2
@@ -142,4 +142,4 @@ runs:
       run: |
         MATRIX_JSON=$(php ${{ github.action_path }}/action.php)
         echo "MATRIX_JSON: $MATRIX_JSON"
-        echo "::set-output name=matrix::${MATRIX_JSON}"
+        echo "matrix=${MATRIX_JSON}" >> "$GITHUB_OUTPUT"
