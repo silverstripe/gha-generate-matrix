@@ -1,0 +1,11 @@
+name: Action CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  actionci:
+    name: Action CI
+    uses: silverstripe/gha-action-ci/.github/workflows/action-ci.yml@v1
