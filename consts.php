@@ -342,6 +342,7 @@ const INSTALLER_TO_REPO_MINOR_VERSIONS = [
         'silverstripe-advancedworkflow' => '5.9',
         'silverstripe-akismet' => '4.5',
         'silverstripe-auditor' => '2.6',
+        'silverstripe-behat-extension' => '4.11',
         'silverstripe-blog' => '3.12',
         'silverstripe-ckan-registry' => '1.7',
         'silverstripe-comments' => '3.10',
