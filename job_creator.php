@@ -56,6 +56,25 @@ class JobCreator
                 }
             }
         }
+        // has a lockstepped .x-dev requirement in composer.json
+        if (file_exists($this->composerJsonPath)) {
+            $json = json_decode(file_get_contents($this->composerJsonPath));
+            foreach (LOCKSTEPPED_REPOS as $lockedSteppedRepo) {
+                $composerRepo = 'silverstripe/' . str_replace('silverstripe-', '', $lockedSteppedRepo);
+                if (isset($json->require->{$composerRepo})) {
+                    $version = $json->require->{$composerRepo};
+                    if (preg_match('#^([0-9\.]+)\.x\-dev$#', $version, $matches)) {
+                        $versionNumber = $matches[1];
+                        // If the lockstepped dependency is "three less" (e.g. silverstripe/admin is 3 major
+                        // versions behind silverstripe/installer), account for that here.
+                        if (in_array($lockedSteppedRepo, LOCKSTEPPED_REPOS_VERSION_IS_THREE_LESS)) {
+                            $versionNumber += 3;
+                        }
+                        return $versionNumber . '.x-dev';
+                    }
+                }
+            }
+        }
         // fallback to use the next-minor or latest-minor version of installer
         $installerVersions = array_keys(INSTALLER_TO_PHP_VERSIONS);
         $installerVersions = array_filter($installerVersions, fn($version) => substr($version, 0, 1) === $cmsMajor);
