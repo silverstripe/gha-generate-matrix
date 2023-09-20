@@ -27,6 +27,10 @@ const INSTALLER_TO_PHP_VERSIONS = [
         '8.1',
         '8.2',
     ],
+    '5.1' => [
+        '8.1',
+        '8.2',
+    ],
     '5' => [
         '8.1',
         '8.2',
@@ -57,6 +61,17 @@ const LOCKSTEPPED_REPOS = [
     // supplied by installer. Just adding a theme as a dev-dependency is insufficient because we'd still
     // lack the yml config to activate that theme
     'recipe-blog',
+];
+
+// lockstepped repos that are "three less" e.g. silverstripe/admin 1 is for CMS 4
+const LOCKSTEPPED_REPOS_VERSION_IS_THREE_LESS = [
+    'silverstripe-admin',
+    'silverstripe-asset-admin',
+    'silverstripe-assets',
+    'silverstripe-campaign-admin',
+    'silverstripe-errorpage',
+    'silverstripe-versioned',
+    'silverstripe-versioned-admin',
 ];
 
 // Repositories that do not require silverstripe/installer to be explicitly added as a dependency for testing
