@@ -41,6 +41,7 @@ const DB_MYSQL_57 = 'mysql57';
 const DB_MYSQL_57_PDO = 'mysql57pdo';
 const DB_MYSQL_80 = 'mysql80';
 const DB_PGSQL = 'pgsql';
+const DB_MARIADB = 'mariadb';
 
 // Used when determining the version of installer to used. Intentionally doesn't include recipes
 const LOCKSTEPPED_REPOS = [
