@@ -348,6 +348,7 @@ class JobCreator
         } else {
             $matrix['include'][] = $this->createJob(0, [
                 'composer_args' => '--prefer-lowest',
+                'db' => DB_MYSQL_57,
                 'phpunit' => true,
                 'phpunit_suite' => $suite,
             ]);
@@ -369,7 +370,7 @@ class JobCreator
                 ]);
             } elseif ($this->getCmsMajor() === '5') {
                 $matrix['include'][] = $this->createJob(0, [
-                    'db' => DB_MYSQL_57,
+                    'db' => DB_MARIADB,
                     'phpunit' => true,
                     'phpunit_suite' => $suite,
                 ]);

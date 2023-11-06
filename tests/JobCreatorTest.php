@@ -264,7 +264,7 @@ class JobCreatorTest extends TestCase
                     [
                         'installer_version' => '5.x-dev',
                         'php' => '8.1',
-                        'db' => DB_MYSQL_57,
+                        'db' => DB_MARIADB,
                         'composer_require_extra' => '',
                         'composer_args' => '',
                         'name_suffix' => '',
@@ -276,7 +276,7 @@ class JobCreatorTest extends TestCase
                         'endtoend_suite' => 'root',
                         'endtoend_config' => '',
                         'js' => 'false',
-                        'name' => '8.1 mysql57 phpunit all',
+                        'name' => '8.1 mariadb phpunit all',
                     ],
                     [
                         'installer_version' => '5.x-dev',
@@ -771,7 +771,7 @@ class JobCreatorTest extends TestCase
                 '5.x-dev',
                 [
                     '8.1 prf-low mysql57 phpunit all',
-                    '8.1 mysql57 phpunit all',
+                    '8.1 mariadb phpunit all',
                     '8.2 mysql80 phpunit all'
                 ]
             ],
@@ -781,7 +781,7 @@ class JobCreatorTest extends TestCase
                 '5.x-dev',
                 [
                     '8.1 prf-low mysql57 phpunit all',
-                    '8.1 mysql57 phpunit all',
+                    '8.1 mariadb phpunit all',
                     '8.2 mysql80 phpunit all'
                 ]
             ],
@@ -791,7 +791,7 @@ class JobCreatorTest extends TestCase
                 '5.x-dev',
                 [
                     '8.1 prf-low mysql57 phpunit all',
-                    '8.1 mysql57 phpunit all',
+                    '8.1 mariadb phpunit all',
                     '8.2 mysql80 phpunit all'
                 ]
             ],
