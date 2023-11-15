@@ -98,6 +98,7 @@ const NO_INSTALLER_UNLOCKSTEPPED_REPOS = [
     'api.silverstripe.org',
     'cow',
     'silverstripe-config',
+    'markdown-php-codesniffer',
 ];
 
 const CMS_TO_REPO_MAJOR_VERSIONS = [
