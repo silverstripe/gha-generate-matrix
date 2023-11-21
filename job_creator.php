@@ -197,23 +197,33 @@ class JobCreator
         return false;
     }
 
-    private function getPhpVersion(int $phpIndex): string
+    /**
+     * Get the branch name from the installer version and left only the minor version
+     * e.g. 4.10.x-dev -> 4.10
+     */
+    private function getBranchName(): string
     {
-        if ($this->phpVersionOverride) {
-            return $this->phpVersionOverride;
-        }
-        $key = str_replace('.x-dev', '', $this->installerVersion);
+        $version = str_replace('.x-dev', '', $this->installerVersion);
         $repo = explode('/', $this->githubRepository)[1];
         if (in_array($repo, NO_INSTALLER_LOCKSTEPPED_REPOS)) {
             $cmsMajor = $this->getCmsMajor();
             $branch = $this->getCleanedBranch();
             if (preg_match('#^[1-9]$#', $branch)) {
-                $key = $cmsMajor;
+                $version = $cmsMajor;
             } elseif (preg_match('#^[1-9]\.([0-9]+)$#', $branch, $matches)) {
-                $key = sprintf('%d.%d', $cmsMajor, $matches[1]);
+                $version = sprintf('%d.%d', $cmsMajor, $matches[1]);
             }
         }
-        $phpVersions = INSTALLER_TO_PHP_VERSIONS[$key] ?? INSTALLER_TO_PHP_VERSIONS['4'];
+
+        return $version;
+    }
+
+    private function getPhpVersion(int $phpIndex): string
+    {
+        if ($this->phpVersionOverride) {
+            return $this->phpVersionOverride;
+        }
+        $phpVersions = $this->getListOfPhpVersionsByBranchName();
         // Use the max allowed php version
         if (!array_key_exists($phpIndex, $phpVersions)) {
             for ($i = count($phpVersions) - 1; $i >= 0; $i--) {
@@ -235,6 +245,7 @@ class JobCreator
                 return $phpVersion;
             }
         }
+        
         throw new Exception("No valid PHP version allowed");
     }
 
@@ -369,19 +380,55 @@ class JobCreator
                     'phpunit_suite' => $suite,
                 ]);
             } elseif ($this->getCmsMajor() === '5') {
-                $matrix['include'][] = $this->createJob(0, [
-                    'db' => DB_MARIADB,
-                    'phpunit' => true,
-                    'phpunit_suite' => $suite,
-                ]);
-                $matrix['include'][] = $this->createJob(1, [
-                    'db' => DB_MYSQL_80,
-                    'phpunit' => true,
-                    'phpunit_suite' => $suite,
-                ]);
+                // phpunit tests for cms 5 are run on php 8.1, 8.2 or 8.3 and mysql 8.0 or mariadb
+                $phpToDB = $this->generatePhpToDBMap();
+                foreach ($phpToDB as $php => $db) {
+                    $matrix['include'][] = $this->createJob($this->getIndexByPHPVersion($php), [
+                        'db' => $db,
+                        'phpunit' => true,
+                        'phpunit_suite' => $suite,
+                    ]);
+                }
             }
         }
         return $matrix;
+    }
+
+    /**
+     * Return the list of php versions for the branch
+     */
+    private function getListOfPhpVersionsByBranchName(): array
+    {
+        return INSTALLER_TO_PHP_VERSIONS[$this->getBranchName()] ?? INSTALLER_TO_PHP_VERSIONS['4'];
+    }
+
+    /**
+     * Return the index of the php version in the list of php versions for the branch
+     */
+    private function getIndexByPHPVersion(string $version): int
+    {
+        return array_search($version, $this->getListOfPhpVersionsByBranchName()) ?? 0;
+    }
+
+    /**
+     * Generate a map of php versions to db versions
+     * e.g. [ '8.1' => 'mariadb', '8.2' => 'mysql80' ]
+     */
+    private function generatePhpToDBMap(): array
+    {
+        $map = [];
+        $phpVersions = $this->getListOfPhpVersionsByBranchName();
+        $dbs = [DB_MARIADB, DB_MYSQL_80];
+        foreach ($phpVersions as $key => $phpVersion) {
+            if (count($phpVersions) < 3) {
+                $map[$phpVersion] = $dbs[$key];
+            } else {
+                if ($key === 0) continue;
+                $map[$phpVersion] = array_key_exists($key, $dbs) ? $dbs[$key - 1] : DB_MYSQL_80;
+            }
+        }
+
+        return $map;
     }
 
     private function doRunPhpCoverage(array $run): bool
