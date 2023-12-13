@@ -263,6 +263,70 @@ class JobCreatorTest extends TestCase
                     ],
                     [
                         'installer_version' => '5.x-dev',
+                        'php' => '8.2',
+                        'db' => DB_MARIADB,
+                        'composer_require_extra' => '',
+                        'composer_args' => '',
+                        'name_suffix' => '',
+                        'phpunit' => 'true',
+                        'phpunit_suite' => 'all',
+                        'phplinting' => 'false',
+                        'phpcoverage' => 'false',
+                        'endtoend' => 'false',
+                        'endtoend_suite' => 'root',
+                        'endtoend_config' => '',
+                        'js' => 'false',
+                        'name' => '8.2 mariadb phpunit all',
+                    ],
+                    [
+                        'installer_version' => '5.x-dev',
+                        'php' => '8.3',
+                        'db' => DB_MYSQL_80,
+                        'composer_require_extra' => '',
+                        'composer_args' => '',
+                        'name_suffix' => '',
+                        'phpunit' => 'true',
+                        'phpunit_suite' => 'all',
+                        'phplinting' => 'false',
+                        'phpcoverage' => 'false',
+                        'endtoend' => 'false',
+                        'endtoend_suite' => 'root',
+                        'endtoend_config' => '',
+                        'js' => 'false',
+                        'name' => '8.3 mysql80 phpunit all',
+                    ],
+                ]
+            ],
+            // general test for v5.1
+            [
+                implode("\n", [
+                    $this->getGenericYml(),
+                    <<<EOT
+                    github_repository: 'myaccount/silverstripe-framework'
+                    github_my_ref: '5.1'
+                    parent_branch: ''
+                    EOT
+                ]),
+                [
+                    [
+                        'installer_version' => '5.1.x-dev',
+                        'php' => '8.1',
+                        'db' => DB_MYSQL_57,
+                        'composer_require_extra' => '',
+                        'composer_args' => '--prefer-lowest',
+                        'name_suffix' => '',
+                        'phpunit' => 'true',
+                        'phpunit_suite' => 'all',
+                        'phplinting' => 'false',
+                        'phpcoverage' => 'false',
+                        'endtoend' => 'false',
+                        'endtoend_suite' => 'root',
+                        'endtoend_config' => '',
+                        'js' => 'false',
+                        'name' => '8.1 prf-low mysql57 phpunit all',
+                    ],
+                    [
+                        'installer_version' => '5.1.x-dev',
                         'php' => '8.1',
                         'db' => DB_MARIADB,
                         'composer_require_extra' => '',
@@ -279,7 +343,7 @@ class JobCreatorTest extends TestCase
                         'name' => '8.1 mariadb phpunit all',
                     ],
                     [
-                        'installer_version' => '5.x-dev',
+                        'installer_version' => '5.1.x-dev',
                         'php' => '8.2',
                         'db' => DB_MYSQL_80,
                         'composer_require_extra' => '',
@@ -294,6 +358,70 @@ class JobCreatorTest extends TestCase
                         'endtoend_config' => '',
                         'js' => 'false',
                         'name' => '8.2 mysql80 phpunit all',
+                    ],
+                ]
+            ],
+            // general test for v5.2
+            [
+                implode("\n", [
+                    $this->getGenericYml(),
+                    <<<EOT
+                    github_repository: 'myaccount/silverstripe-framework'
+                    github_my_ref: '5.2'
+                    parent_branch: ''
+                    EOT
+                ]),
+                [
+                    [
+                        'installer_version' => '5.2.x-dev',
+                        'php' => '8.1',
+                        'db' => DB_MYSQL_57,
+                        'composer_require_extra' => '',
+                        'composer_args' => '--prefer-lowest',
+                        'name_suffix' => '',
+                        'phpunit' => 'true',
+                        'phpunit_suite' => 'all',
+                        'phplinting' => 'false',
+                        'phpcoverage' => 'false',
+                        'endtoend' => 'false',
+                        'endtoend_suite' => 'root',
+                        'endtoend_config' => '',
+                        'js' => 'false',
+                        'name' => '8.1 prf-low mysql57 phpunit all',
+                    ],
+                    [
+                        'installer_version' => '5.2.x-dev',
+                        'php' => '8.2',
+                        'db' => DB_MARIADB,
+                        'composer_require_extra' => '',
+                        'composer_args' => '',
+                        'name_suffix' => '',
+                        'phpunit' => 'true',
+                        'phpunit_suite' => 'all',
+                        'phplinting' => 'false',
+                        'phpcoverage' => 'false',
+                        'endtoend' => 'false',
+                        'endtoend_suite' => 'root',
+                        'endtoend_config' => '',
+                        'js' => 'false',
+                        'name' => '8.2 mariadb phpunit all',
+                    ],
+                    [
+                        'installer_version' => '5.2.x-dev',
+                        'php' => '8.3',
+                        'db' => DB_MYSQL_80,
+                        'composer_require_extra' => '',
+                        'composer_args' => '',
+                        'name_suffix' => '',
+                        'phpunit' => 'true',
+                        'phpunit_suite' => 'all',
+                        'phplinting' => 'false',
+                        'phpcoverage' => 'false',
+                        'endtoend' => 'false',
+                        'endtoend_suite' => 'root',
+                        'endtoend_config' => '',
+                        'js' => 'false',
+                        'name' => '8.3 mysql80 phpunit all',
                     ],
                 ]
             ],
@@ -675,9 +803,9 @@ class JobCreatorTest extends TestCase
             // fallback to looking at deps in composer.json, use current minor of installer .x-dev
             ['myaccount/silverstripe-admin', 'mybranch', ['silverstripe/framework' => '5.x-dev'], '5.x-dev'],
             ['myaccount/silverstripe-admin', 'mybranch', ['silverstripe/framework' => '5.0.x-dev'], '5.0.x-dev'],
-            ['myaccount/silverstripe-admin', 'mybranch', ['silverstripe/framework' => '^5'], '5.1.x-dev'],
-            ['myaccount/silverstripe-somemodule', 'mybranch', ['silverstripe/cms' => '^5'], '5.1.x-dev'],
-            ['myaccount/silverstripe-somemodule', 'mybranch', ['silverstripe/admin' => '^2'], '5.1.x-dev'],
+            ['myaccount/silverstripe-admin', 'mybranch', ['silverstripe/framework' => '^5'], '5.2.x-dev'],
+            ['myaccount/silverstripe-somemodule', 'mybranch', ['silverstripe/cms' => '^5'], '5.2.x-dev'],
+            ['myaccount/silverstripe-somemodule', 'mybranch', ['silverstripe/admin' => '^2'], '5.2.x-dev'],
             ['myaccount/silverstripe-somemodule', '3', ['silverstripe/framework' => '^5'], '5.x-dev'],
         ];
     }
@@ -771,8 +899,8 @@ class JobCreatorTest extends TestCase
                 '5.x-dev',
                 [
                     '8.1 prf-low mysql57 phpunit all',
-                    '8.1 mariadb phpunit all',
-                    '8.2 mysql80 phpunit all'
+                    '8.2 mariadb phpunit all',
+                    '8.3 mysql80 phpunit all',
                 ]
             ],
             'composerupgrade_definedphpversion_framework5' => [
@@ -781,8 +909,8 @@ class JobCreatorTest extends TestCase
                 '5.x-dev',
                 [
                     '8.1 prf-low mysql57 phpunit all',
-                    '8.1 mariadb phpunit all',
-                    '8.2 mysql80 phpunit all'
+                    '8.2 mariadb phpunit all',
+                    '8.3 mysql80 phpunit all',
                 ]
             ],
             'composerupgrade_invalidphpversion_framework5' => [
@@ -791,8 +919,68 @@ class JobCreatorTest extends TestCase
                 '5.x-dev',
                 [
                     '8.1 prf-low mysql57 phpunit all',
+                    '8.2 mariadb phpunit all',
+                    '8.3 mysql80 phpunit all',
+                ]
+            ],
+            'composerupgrade_nophpversion_framework51' => [
+                'false',
+                '',
+                '5.1.x-dev',
+                [
+                    '8.1 prf-low mysql57 phpunit all',
                     '8.1 mariadb phpunit all',
-                    '8.2 mysql80 phpunit all'
+                    '8.2 mysql80 phpunit all',
+                ]
+            ],
+            'composerupgrade_definedphpversion_framework51' => [
+                'false',
+                '21.99',
+                '5.1.x-dev',
+                [
+                    '8.1 prf-low mysql57 phpunit all',
+                    '8.1 mariadb phpunit all',
+                    '8.2 mysql80 phpunit all',
+                ]
+            ],
+            'composerupgrade_invalidphpversion_framework51' => [
+                'false',
+                'fish',
+                '5.1.x-dev',
+                [
+                    '8.1 prf-low mysql57 phpunit all',
+                    '8.1 mariadb phpunit all',
+                    '8.2 mysql80 phpunit all',
+                ]
+            ],
+            'composerupgrade_nophpversion_framework52' => [
+                'false',
+                '',
+                '5.2.x-dev',
+                [
+                    '8.1 prf-low mysql57 phpunit all',
+                    '8.2 mariadb phpunit all',
+                    '8.3 mysql80 phpunit all',
+                ]
+            ],
+            'composerupgrade_definedphpversion_framework52' => [
+                'false',
+                '21.99',
+                '5.2.x-dev',
+                [
+                    '8.1 prf-low mysql57 phpunit all',
+                    '8.2 mariadb phpunit all',
+                    '8.3 mysql80 phpunit all',
+                ]
+            ],
+            'composerupgrade_invalidphpversion_framework52' => [
+                'false',
+                'fish',
+                '5.2.x-dev',
+                [
+                    '8.1 prf-low mysql57 phpunit all',
+                    '8.2 mariadb phpunit all',
+                    '8.3 mysql80 phpunit all',
                 ]
             ],
         ];
