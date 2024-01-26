@@ -762,6 +762,7 @@ class JobCreatorTest extends TestCase
         string $githubRepository,
         string $branch,
         array $composerDeps,
+        string $repoType,
         string $expected
     ): void {
         if (!function_exists('yaml_parse')) {
@@ -778,6 +779,9 @@ class JobCreatorTest extends TestCase
             $creator = new JobCreator();
             $creator->composerJsonPath = '__composer.json';
             $composer = new stdClass();
+            if ($repoType) {
+                $composer->type = $repoType;
+            }
             $composer->require = new stdClass();
             foreach ($composerDeps as $dep => $version) {
                 $composer->require->{$dep} = $version;
@@ -795,18 +799,21 @@ class JobCreatorTest extends TestCase
         $currentMinor = $this->getCurrentMinorInstallerVersion('4') . '.x-dev';
         return [
             // priority given to branch name
-            ['myaccount/silverstripe-framework', '4', [], '4.x-dev'],
-            ['myaccount/silverstripe-framework', '4.10', [], '4.10.x-dev'],
-            ['myaccount/silverstripe-framework', 'burger', [], $currentMinor],
-            ['myaccount/silverstripe-framework', '5', [], '5.x-dev'],
-            ['myaccount/silverstripe-framework', '5.10', [], '5.10.x-dev'],
+            ['myaccount/silverstripe-framework', '4', [], 'silverstripe-module', '4.x-dev'],
+            ['myaccount/silverstripe-framework', '4.10', [], 'silverstripe-vendormodule', '4.10.x-dev'],
+            ['myaccount/silverstripe-framework', 'burger', [], 'silverstripe-theme', $currentMinor],
+            ['myaccount/silverstripe-framework', '5', [], 'silverstripe-recipe', '5.x-dev'],
+            ['myaccount/silverstripe-framework', '5.10', [], 'silverstripe-vendormodule', '5.10.x-dev'],
             // fallback to looking at deps in composer.json, use current minor of installer .x-dev
-            ['myaccount/silverstripe-admin', 'mybranch', ['silverstripe/framework' => '5.x-dev'], '5.x-dev'],
-            ['myaccount/silverstripe-admin', 'mybranch', ['silverstripe/framework' => '5.0.x-dev'], '5.0.x-dev'],
-            ['myaccount/silverstripe-admin', 'mybranch', ['silverstripe/framework' => '^5'], '5.2.x-dev'],
-            ['myaccount/silverstripe-somemodule', 'mybranch', ['silverstripe/cms' => '^5'], '5.2.x-dev'],
-            ['myaccount/silverstripe-somemodule', 'mybranch', ['silverstripe/admin' => '^2'], '5.2.x-dev'],
-            ['myaccount/silverstripe-somemodule', '3', ['silverstripe/framework' => '^5'], '5.x-dev'],
+            ['myaccount/silverstripe-admin', 'mybranch', ['silverstripe/framework' => '5.x-dev'], 'silverstripe-module', '5.x-dev'],
+            ['myaccount/silverstripe-admin', 'mybranch', ['silverstripe/framework' => '5.0.x-dev'], 'silverstripe-vendormodule', '5.0.x-dev'],
+            ['myaccount/silverstripe-admin', 'mybranch', ['silverstripe/framework' => '^5'], 'silverstripe-theme', '5.2.x-dev'],
+            ['myaccount/silverstripe-somemodule', 'mybranch', ['silverstripe/cms' => '^5'], 'silverstripe-recipe', '5.2.x-dev'],
+            ['myaccount/silverstripe-somemodule', 'mybranch', ['silverstripe/admin' => '^2'], 'silverstripe-vendormodule', '5.2.x-dev'],
+            ['myaccount/silverstripe-somemodule', '3', ['silverstripe/framework' => '^5'], 'silverstripe-vendormodule', '5.x-dev'],
+            ['myaccount/silverstripe-somemodule', '3', ['silverstripe/framework' => '^5'], 'package', ''],
+            ['myaccount/silverstripe-somemodule', '3', ['silverstripe/framework' => '^5'], '', ''],
+            ['myaccount/silverstripe-somemodule', '3', [], '', ''],
         ];
     }
 
@@ -817,6 +824,7 @@ class JobCreatorTest extends TestCase
         string $composerInstall,
         string $configPlatformPhp,
         string $frameworkVersion,
+        string $repoType,
         array $expected
     ): void {
         $yml = implode("\n", [
@@ -830,6 +838,9 @@ class JobCreatorTest extends TestCase
             $creator = new JobCreator();
             $creator->composerJsonPath = '__composer.json';
             $composer = new stdClass();
+            if ($repoType) {
+                $composer->type = $repoType;
+            }
             $composer->require = new stdClass();
             $composer->require->{'silverstripe/framework'} = $frameworkVersion;
             if ($configPlatformPhp) {
@@ -855,6 +866,7 @@ class JobCreatorTest extends TestCase
                 'true',
                 '',
                 '4.x-dev',
+                'silverstripe-module',
                 [
                     '7.4 mysql57 phpunit all'
                 ]
@@ -863,6 +875,7 @@ class JobCreatorTest extends TestCase
                 'true',
                 '',
                 '5.x-dev',
+                'silverstripe-vendormodule',
                 [
                     '8.1 mysql57 phpunit all'
                 ]
@@ -871,6 +884,7 @@ class JobCreatorTest extends TestCase
                 'true',
                 '21.99',
                 '5.x-dev',
+                'silverstripe-recipe',
                 [
                     '21.99 mysql57 phpunit all'
                 ]
@@ -879,6 +893,7 @@ class JobCreatorTest extends TestCase
                 'true',
                 'fish',
                 '5.x-dev',
+                'silverstripe-theme',
                 [
                     '8.1 mysql57 phpunit all'
                 ]
@@ -887,6 +902,7 @@ class JobCreatorTest extends TestCase
                 'false',
                 '',
                 '4.x-dev',
+                'silverstripe-module',
                 [
                     '7.4 prf-low mysql57 phpunit all',
                     '8.0 mysql57pdo phpunit all',
@@ -897,6 +913,7 @@ class JobCreatorTest extends TestCase
                 'false',
                 '',
                 '5.x-dev',
+                'silverstripe-vendormodule',
                 [
                     '8.1 prf-low mysql57 phpunit all',
                     '8.2 mariadb phpunit all',
@@ -907,6 +924,7 @@ class JobCreatorTest extends TestCase
                 'false',
                 '21.99',
                 '5.x-dev',
+                'silverstripe-recipe',
                 [
                     '8.1 prf-low mysql57 phpunit all',
                     '8.2 mariadb phpunit all',
@@ -917,6 +935,7 @@ class JobCreatorTest extends TestCase
                 'false',
                 'fish',
                 '5.x-dev',
+                'silverstripe-theme',
                 [
                     '8.1 prf-low mysql57 phpunit all',
                     '8.2 mariadb phpunit all',
@@ -927,6 +946,7 @@ class JobCreatorTest extends TestCase
                 'false',
                 '',
                 '5.1.x-dev',
+                'silverstripe-module',
                 [
                     '8.1 prf-low mysql57 phpunit all',
                     '8.1 mariadb phpunit all',
@@ -937,6 +957,7 @@ class JobCreatorTest extends TestCase
                 'false',
                 '21.99',
                 '5.1.x-dev',
+                'silverstripe-vendormodule',
                 [
                     '8.1 prf-low mysql57 phpunit all',
                     '8.1 mariadb phpunit all',
@@ -947,6 +968,7 @@ class JobCreatorTest extends TestCase
                 'false',
                 'fish',
                 '5.1.x-dev',
+                'silverstripe-recipe',
                 [
                     '8.1 prf-low mysql57 phpunit all',
                     '8.1 mariadb phpunit all',
@@ -957,6 +979,7 @@ class JobCreatorTest extends TestCase
                 'false',
                 '',
                 '5.2.x-dev',
+                'silverstripe-theme',
                 [
                     '8.1 prf-low mysql57 phpunit all',
                     '8.2 mariadb phpunit all',
@@ -967,6 +990,7 @@ class JobCreatorTest extends TestCase
                 'false',
                 '21.99',
                 '5.2.x-dev',
+                'silverstripe-module',
                 [
                     '8.1 prf-low mysql57 phpunit all',
                     '8.2 mariadb phpunit all',
@@ -977,10 +1001,33 @@ class JobCreatorTest extends TestCase
                 'false',
                 'fish',
                 '5.2.x-dev',
+                'silverstripe-vendormodule',
                 [
                     '8.1 prf-low mysql57 phpunit all',
                     '8.2 mariadb phpunit all',
                     '8.3 mysql80 phpunit all',
+                ]
+            ],
+            'composerupgrade_invalidphpversion_notmodule1' => [
+                'false',
+                'fish',
+                '*',
+                'package',
+                [
+                    '7.4 prf-low mysql57 phpunit all',
+                    '8.0 mysql57pdo phpunit all',
+                    '8.1 mysql80 phpunit all',
+                ]
+            ],
+            'composerupgrade_invalidphpversion_notmodule2' => [
+                'false',
+                'fish',
+                '*',
+                '',
+                [
+                    '7.4 prf-low mysql57 phpunit all',
+                    '8.0 mysql57pdo phpunit all',
+                    '8.1 mysql80 phpunit all',
                 ]
             ],
         ];

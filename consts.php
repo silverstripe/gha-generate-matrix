@@ -99,12 +99,7 @@ const NO_INSTALLER_LOCKSTEPPED_REPOS = [
 ];
 
 const NO_INSTALLER_UNLOCKSTEPPED_REPOS = [
-    'vendor-plugin',
-    'recipe-plugin',
-    'api.silverstripe.org',
-    'cow',
     'silverstripe-config',
-    'markdown-php-codesniffer',
 ];
 
 const CMS_TO_REPO_MAJOR_VERSIONS = [
