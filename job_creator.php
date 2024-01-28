@@ -56,9 +56,20 @@ class JobCreator
                 }
             }
         }
-        // has a lockstepped .x-dev requirement in composer.json
         if (file_exists($this->composerJsonPath)) {
             $json = json_decode(file_get_contents($this->composerJsonPath));
+            // We shouldn't try to infer the installer version for regular repositories
+            // that weren't already detected via the const-based logic above
+            $silverstripeRepoTypes = [
+                'silverstripe-vendormodule',
+                'silverstripe-module',
+                'silverstripe-recipe',
+                'silverstripe-theme',
+            ];
+            if (!isset($json->type) || !in_array($json->type, $silverstripeRepoTypes)) {
+                return '';
+            }
+            // has a lockstepped .x-dev requirement in composer.json
             foreach (LOCKSTEPPED_REPOS as $lockedSteppedRepo) {
                 $composerRepo = 'silverstripe/' . str_replace('silverstripe-', '', $lockedSteppedRepo);
                 if (isset($json->require->{$composerRepo})) {
