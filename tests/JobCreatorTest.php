@@ -43,6 +43,7 @@ class JobCreatorTest extends TestCase
                 'endtoend_suite' => 'root',
                 'endtoend_config' => '',
                 'js' => false,
+                'needs_full_setup' => false,
             ]],
             // test that NO_INSTALLER_LOCKSTEPPED_REPOS base max PHP version from $branch
             ['myaccount/silverstripe-installer', '4.10', 99, [], [
@@ -193,6 +194,7 @@ class JobCreatorTest extends TestCase
                         'endtoend_suite' => 'root',
                         'endtoend_config' => '',
                         'js' => 'false',
+                        'needs_full_setup' => 'true',
                         'name' => '7.4 prf-low mysql57 phpunit all',
                     ],
                     [
@@ -211,6 +213,7 @@ class JobCreatorTest extends TestCase
                         'endtoend_suite' => 'root',
                         'endtoend_config' => '',
                         'js' => 'false',
+                        'needs_full_setup' => 'true',
                         'name' => '8.0 mysql57pdo phpunit all',
                     ],
                     [
@@ -229,6 +232,7 @@ class JobCreatorTest extends TestCase
                         'endtoend_suite' => 'root',
                         'endtoend_config' => '',
                         'js' => 'false',
+                        'needs_full_setup' => 'true',
                         'name' => '8.1 mysql80 phpunit all',
                     ],
                 ]
@@ -259,6 +263,7 @@ class JobCreatorTest extends TestCase
                         'endtoend_suite' => 'root',
                         'endtoend_config' => '',
                         'js' => 'false',
+                        'needs_full_setup' => 'true',
                         'name' => '8.1 prf-low mysql57 phpunit all',
                     ],
                     [
@@ -276,6 +281,7 @@ class JobCreatorTest extends TestCase
                         'endtoend_suite' => 'root',
                         'endtoend_config' => '',
                         'js' => 'false',
+                        'needs_full_setup' => 'true',
                         'name' => '8.2 mariadb phpunit all',
                     ],
                     [
@@ -293,6 +299,7 @@ class JobCreatorTest extends TestCase
                         'endtoend_suite' => 'root',
                         'endtoend_config' => '',
                         'js' => 'false',
+                        'needs_full_setup' => 'true',
                         'name' => '8.3 mysql80 phpunit all',
                     ],
                 ]
@@ -323,6 +330,7 @@ class JobCreatorTest extends TestCase
                         'endtoend_suite' => 'root',
                         'endtoend_config' => '',
                         'js' => 'false',
+                        'needs_full_setup' => 'true',
                         'name' => '8.1 prf-low mysql57 phpunit all',
                     ],
                     [
@@ -340,6 +348,7 @@ class JobCreatorTest extends TestCase
                         'endtoend_suite' => 'root',
                         'endtoend_config' => '',
                         'js' => 'false',
+                        'needs_full_setup' => 'true',
                         'name' => '8.1 mariadb phpunit all',
                     ],
                     [
@@ -357,6 +366,7 @@ class JobCreatorTest extends TestCase
                         'endtoend_suite' => 'root',
                         'endtoend_config' => '',
                         'js' => 'false',
+                        'needs_full_setup' => 'true',
                         'name' => '8.2 mysql80 phpunit all',
                     ],
                 ]
@@ -387,6 +397,7 @@ class JobCreatorTest extends TestCase
                         'endtoend_suite' => 'root',
                         'endtoend_config' => '',
                         'js' => 'false',
+                        'needs_full_setup' => 'true',
                         'name' => '8.1 prf-low mysql57 phpunit all',
                     ],
                     [
@@ -404,6 +415,7 @@ class JobCreatorTest extends TestCase
                         'endtoend_suite' => 'root',
                         'endtoend_config' => '',
                         'js' => 'false',
+                        'needs_full_setup' => 'true',
                         'name' => '8.2 mariadb phpunit all',
                     ],
                     [
@@ -421,6 +433,7 @@ class JobCreatorTest extends TestCase
                         'endtoend_suite' => 'root',
                         'endtoend_config' => '',
                         'js' => 'false',
+                        'needs_full_setup' => 'true',
                         'name' => '8.3 mysql80 phpunit all',
                     ],
                 ]

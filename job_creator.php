@@ -129,6 +129,7 @@ class JobCreator
             'endtoend_suite' => 'root',
             'endtoend_config' => '',
             'js' => false,
+            'needs_full_setup' => $this->installerVersion !== '',
         ];
         return array_merge($default, $opts);
     }
