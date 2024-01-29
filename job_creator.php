@@ -8,6 +8,8 @@ class JobCreator
 
     public string $githubRepository = '';
 
+    public string $repoName = '';
+
     private string $installerVersion = '';
 
     private string $parentBranch = '';
@@ -21,16 +23,16 @@ class JobCreator
      */
     public function getInstallerVersion(): string
     {
-        $repo = explode('/', $this->githubRepository)[1];
+        $this->repoName = explode('/', $this->githubRepository)[1];
         // repo should not use installer
-        if (in_array($repo, NO_INSTALLER_LOCKSTEPPED_REPOS) || in_array($repo, NO_INSTALLER_UNLOCKSTEPPED_REPOS)) {
+        if (in_array($this->repoName, NO_INSTALLER_LOCKSTEPPED_REPOS) || in_array($this->repoName, NO_INSTALLER_UNLOCKSTEPPED_REPOS)) {
             return '';
         }
         $branch = $this->getCleanedBranch(true);
         $isReleaseBranch = preg_match('#^[0-9\.]+-release$#', $branch);
         $cmsMajor = $this->getCmsMajor();
         // repo is a lockstepped repo
-        if (in_array($repo, LOCKSTEPPED_REPOS) && (is_numeric($branch) || $isReleaseBranch)) {
+        if (in_array($this->repoName, LOCKSTEPPED_REPOS) && (is_numeric($branch) || $isReleaseBranch)) {
             if ($isReleaseBranch) {
                 return 'dev-' . preg_replace('#^([0-9])#', $cmsMajor, $branch);
             }
@@ -47,7 +49,7 @@ class JobCreator
             foreach (INSTALLER_TO_REPO_MINOR_VERSIONS[$installerVersion] as $_repo => $_repoVersions) {
                 $repoVersions = is_array($_repoVersions) ? $_repoVersions : [$_repoVersions];
                 foreach ($repoVersions as $repoVersion) {
-                    if ($repo === $_repo && $repoVersion === preg_replace('#-release$#', '', $branch)) {
+                    if ($this->repoName === $_repo && $repoVersion === preg_replace('#-release$#', '', $branch)) {
                         if ($isReleaseBranch) {
                             return 'dev-' . $installerVersion . '-release';
                         }
@@ -129,7 +131,7 @@ class JobCreator
             'endtoend_suite' => 'root',
             'endtoend_config' => '',
             'js' => false,
-            'needs_full_setup' => $this->installerVersion !== '',
+            'needs_full_setup' => $this->installerVersion !== '' && !in_array($this->repoName, NO_INSTALLER_LOCKSTEPPED_REPOS),
         ];
         return array_merge($default, $opts);
     }
@@ -216,8 +218,7 @@ class JobCreator
     private function getBranchName(): string
     {
         $version = str_replace('.x-dev', '', $this->installerVersion);
-        $repo = explode('/', $this->githubRepository)[1];
-        if (in_array($repo, NO_INSTALLER_LOCKSTEPPED_REPOS)) {
+        if (in_array($this->repoName, NO_INSTALLER_LOCKSTEPPED_REPOS)) {
             $cmsMajor = $this->getCmsMajor();
             $branch = $this->getCleanedBranch();
             if (preg_match('#^[1-9]$#', $branch)) {
@@ -274,7 +275,6 @@ class JobCreator
     private function getCmsMajorFromBranch(): string
     {
         $branch = $this->getCleanedBranch();
-        $repo = explode('/', $this->githubRepository)[1];
         $branchMajor = '';
         if (preg_match('#^[1-9]$#', $branch)) {
             $branchMajor = $branch;
@@ -282,8 +282,8 @@ class JobCreator
             $branchMajor = $matches[1];
         }
         foreach (array_keys(CMS_TO_REPO_MAJOR_VERSIONS) as $cmsMajor) {
-            if (isset(CMS_TO_REPO_MAJOR_VERSIONS[$cmsMajor][$repo])) {
-                if (CMS_TO_REPO_MAJOR_VERSIONS[$cmsMajor][$repo] === $branchMajor) {
+            if (isset(CMS_TO_REPO_MAJOR_VERSIONS[$cmsMajor][$this->repoName])) {
+                if (CMS_TO_REPO_MAJOR_VERSIONS[$cmsMajor][$this->repoName] === $branchMajor) {
                     return $cmsMajor;
                 }
             }

@@ -16,6 +16,7 @@ class JobCreatorTest extends TestCase
     ): void {
         $creator = new JobCreator();
         $creator->githubRepository = $githubRepository;
+        $creator->repoName = explode('/', $githubRepository)[1];
         $creator->branch = $branch;
         $actual = $creator->createJob($phpIndex, $opts);
         foreach ($expected as $key => $expectedVal) {
@@ -74,6 +75,7 @@ class JobCreatorTest extends TestCase
     ): void {
         $creator = new JobCreator();
         $creator->githubRepository = $githubRepository;
+        $creator->repoName = explode('/', $githubRepository)[1];
         $creator->branch = $branch;
         $actual = $creator->getInstallerVersion();
         $this->assertSame($expected, $actual);
