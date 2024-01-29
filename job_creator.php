@@ -131,7 +131,8 @@ class JobCreator
             'endtoend_suite' => 'root',
             'endtoend_config' => '',
             'js' => false,
-            'needs_full_setup' => $this->installerVersion !== '' && !in_array($this->repoName, NO_INSTALLER_LOCKSTEPPED_REPOS),
+            // Needs full setup if installerVersion is set, OR this is one of the no-installer lockstepped repos
+            'needs_full_setup' => $this->installerVersion !== '' || in_array($this->repoName, NO_INSTALLER_LOCKSTEPPED_REPOS),
         ];
         return array_merge($default, $opts);
     }
