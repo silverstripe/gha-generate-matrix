@@ -68,7 +68,9 @@ class JobCreator
                 'silverstripe-recipe',
                 'silverstripe-theme',
             ];
-            if (!isset($json->type) || !in_array($json->type, $silverstripeRepoTypes)) {
+            if ((!isset($json->type) || !in_array($json->type, $silverstripeRepoTypes)
+                && !in_array($this->repoName, FORCE_INSTALLER_UNLOCKEDSTEPPED_REPOS)
+            )) {
                 return '';
             }
             // has a lockstepped .x-dev requirement in composer.json

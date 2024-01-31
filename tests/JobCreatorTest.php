@@ -146,6 +146,9 @@ class JobCreatorTest extends TestCase
             ['myaccount/silverstripe-html5', '2.3', '4.10.x-dev'],
             ['myaccount/silverstripe-html5', '2.4', '4.11.x-dev'],
             ['myaccount/silverstripe-html5', 'burger', $currentMinor],
+            // force installer unlockedstepped repo
+            ['myaccount/silverstripe-serve', '2', $nextMinor],
+            ['myaccount/silverstripe-behat-extension', '2', $nextMinor],
         ];
     }
 
