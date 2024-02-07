@@ -102,6 +102,12 @@ const NO_INSTALLER_UNLOCKSTEPPED_REPOS = [
     'silverstripe-config',
 ];
 
+// Repositories that either don't have a composer type or have a weird composer type, though we still want installer
+const FORCE_INSTALLER_UNLOCKEDSTEPPED_REPOS = [
+    'silverstripe-behat-extension',
+    'silverstripe-serve',
+];
+
 const CMS_TO_REPO_MAJOR_VERSIONS = [
     '4' => [
         'recipe-authoring-tools' => '1',
