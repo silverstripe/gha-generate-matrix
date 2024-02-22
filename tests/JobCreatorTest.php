@@ -62,6 +62,9 @@ class JobCreatorTest extends TestCase
             ['myaccount/silverstripe-installer', '5', 99, [], [
                 'php' => max(INSTALLER_TO_PHP_VERSIONS['5'])
             ]],
+            ['myaccount/silverstripe-installer', '6', 99, [], [
+                'php' => max(INSTALLER_TO_PHP_VERSIONS['6'])
+            ]],
         ];
     }
 
@@ -71,14 +74,48 @@ class JobCreatorTest extends TestCase
     public function testGetInstallerVersion(
         string $githubRepository,
         string $branch,
-        string $expected
+        string $expected,
+        array $customInstallerBranches = [],
+        array $customComposerDeps = []
     ): void {
-        $creator = new JobCreator();
-        $creator->githubRepository = $githubRepository;
-        $creator->repoName = explode('/', $githubRepository)[1];
-        $creator->branch = $branch;
-        $actual = $creator->getInstallerVersion();
-        $this->assertSame($expected, $actual);
+        try {
+            $installerBranchesJson = json_encode($this->getInstallerBranchesJson());
+            if ($customInstallerBranches) {
+                $installerBranchesJson = json_encode($customInstallerBranches);
+            }
+            $creator = new JobCreator();
+            if ($customComposerDeps) {
+                $this->writeComposerJson($customComposerDeps, 'silverstripe-module');
+                $creator->composerJsonPath = '__composer.json';
+            }
+            $creator->githubRepository = $githubRepository;
+            $creator->repoName = explode('/', $githubRepository)[1];
+            $creator->branch = $branch;
+            $actual = $creator->getInstallerVersion($installerBranchesJson);
+            $this->assertSame($expected, $actual);
+        } finally {
+            if (file_exists('__composer.json')) {
+                unlink('__composer.json');
+            }
+        }
+    }
+
+    private function getInstallerBranchesJson(): array
+    {
+        return [
+            ['name' => '4'],
+            ['name' => '4-release'],
+            ['name' => '4.10'],
+            ['name' => '4.10-release'],
+            ['name' => '4.11'],
+            ['name' => '4.12'],
+            ['name' => '4.13'],
+            ['name' => '5'],
+            ['name' => '5.1'],
+            ['name' => '5.2'],
+            ['name' => '6'],
+            ['name' => '6.0'],
+        ];
     }
 
     private function getCurrentMinorInstallerVersion(string $cmsMajor): string
@@ -92,9 +129,9 @@ class JobCreatorTest extends TestCase
 
     public function provideGetInstallerVersion(): array
     {
-        $nextMinor = '4.x-dev';
-        $nextMinorRelease = 'dev-' . $this->getCurrentMinorInstallerVersion('4') . '-release';
-        $currentMinor = $this->getCurrentMinorInstallerVersion('4') . '.x-dev';
+        $nextMinorCms4 = '4.x-dev';
+        $nextMinorCms4Release = 'dev-' . $this->getCurrentMinorInstallerVersion('4') . '-release';
+        $currentMinorCms4 = $this->getCurrentMinorInstallerVersion('4') . '.x-dev';
         return [
             // no-installer repo
             ['myaccount/recipe-cms', '4', ''],
@@ -105,50 +142,62 @@ class JobCreatorTest extends TestCase
             ['myaccount/recipe-cms', 'pulls/burger/myfeature', ''],
             ['myaccount/recipe-cms', '4-release', ''],
             ['myaccount/recipe-cms', '4.10-release', ''],
+            ['myaccount/recipe-cms', '5', ''],
+            ['myaccount/recipe-cms', '5.1', ''],
+            ['myaccount/recipe-cms', '6', ''],
+            ['myaccount/recipe-cms', '6.0', ''],
             // lockstepped repo with 4.* naming
             ['myaccount/silverstripe-framework', '4', '4.x-dev'],
             ['myaccount/silverstripe-framework', '4.10', '4.10.x-dev'],
-            ['myaccount/silverstripe-framework', 'burger', $currentMinor],
+            ['myaccount/silverstripe-framework', 'burger', $currentMinorCms4],
             ['myaccount/silverstripe-framework', 'pulls/4/mybugfix', '4.x-dev'],
             ['myaccount/silverstripe-framework', 'pulls/4.10/mybugfix', '4.10.x-dev'],
-            ['myaccount/silverstripe-framework', 'pulls/burger/myfeature', $currentMinor],
+            ['myaccount/silverstripe-framework', 'pulls/burger/myfeature', $currentMinorCms4],
             ['myaccount/silverstripe-framework', '4-release', 'dev-4-release'],
             ['myaccount/silverstripe-framework', '4.10-release', 'dev-4.10-release'],
             ['myaccount/silverstripe-framework', 'pulls/4.10-release/some-change', 'dev-4.10-release'],
+            ['myaccount/silverstripe-framework', '5', '5.x-dev'],
+            ['myaccount/silverstripe-framework', '5.1', '5.1.x-dev'],
+            ['myaccount/silverstripe-framework', '6', '6.x-dev'],
             // lockstepped repo with 1.* naming
             ['myaccount/silverstripe-admin', '1', '4.x-dev'],
             ['myaccount/silverstripe-admin', '1.10', '4.10.x-dev'],
-            ['myaccount/silverstripe-admin', 'burger', $currentMinor],
+            ['myaccount/silverstripe-admin', 'burger', $currentMinorCms4],
             ['myaccount/silverstripe-admin', 'pulls/1/mybugfix', '4.x-dev'],
             ['myaccount/silverstripe-admin', 'pulls/1.10/mybugfix', '4.10.x-dev'],
-            ['myaccount/silverstripe-admin', 'pulls/burger/myfeature', $currentMinor],
+            ['myaccount/silverstripe-admin', 'pulls/burger/myfeature', $currentMinorCms4],
             ['myaccount/silverstripe-admin', '1-release', 'dev-4-release'],
             ['myaccount/silverstripe-admin', '1.10-release', 'dev-4.10-release'],
             ['myaccount/silverstripe-admin', 'pulls/1.10-release/some-change', 'dev-4.10-release'],
+            ['myaccount/silverstripe-admin', '2', '5.x-dev'],
+            ['myaccount/silverstripe-admin', '2.1', '5.1.x-dev'],
+            ['myaccount/silverstripe-admin', '3', '6.x-dev'],
             // non-lockedstepped repo
-            ['myaccount/silverstripe-tagfield', '2', $nextMinor],
-            ['myaccount/silverstripe-tagfield', '2.9', $currentMinor],
-            ['myaccount/silverstripe-tagfield', 'burger', $currentMinor],
-            ['myaccount/silverstripe-tagfield', 'pulls/2/mybugfix', $nextMinor],
-            ['myaccount/silverstripe-tagfield', 'pulls/2.9/mybugfix', $currentMinor],
-            ['myaccount/silverstripe-tagfield', 'pulls/burger/myfeature', $currentMinor],
+            ['myaccount/silverstripe-tagfield', '2', $nextMinorCms4],
+            ['myaccount/silverstripe-tagfield', '2.9', $currentMinorCms4],
+            ['myaccount/silverstripe-tagfield', 'burger', $currentMinorCms4],
+            ['myaccount/silverstripe-tagfield', 'pulls/2/mybugfix', $nextMinorCms4],
+            ['myaccount/silverstripe-tagfield', 'pulls/2.9/mybugfix', $currentMinorCms4],
+            ['myaccount/silverstripe-tagfield', 'pulls/burger/myfeature', $currentMinorCms4],
             ['myaccount/silverstripe-tagfield', '2-release', 'dev-' . $this->getCurrentMinorInstallerVersion('4') . '-release'],
-            ['myaccount/silverstripe-tagfield', '2.9-release', $nextMinorRelease],
-            ['myaccount/silverstripe-tagfield', 'pulls/2.9-release/some-change', $nextMinorRelease],
+            ['myaccount/silverstripe-tagfield', '2.9-release', $nextMinorCms4Release],
+            ['myaccount/silverstripe-tagfield', 'pulls/2.9-release/some-change', $nextMinorCms4Release],
+            // non-lockstepped repo, fallback to major version of installer (is missing 6.0 installer branch)
+            ['myaccount/silverstripe-tagfield', '4.0', '6.x-dev', [['name' => '6']], ['silverstripe/framework' => '^6']],
             // hardcoded repo version
-            ['myaccount/silverstripe-session-manager', '1', $nextMinor],
+            ['myaccount/silverstripe-session-manager', '1', $nextMinorCms4],
             ['myaccount/silverstripe-session-manager', '1.2', '4.10.x-dev'],
-            ['myaccount/silverstripe-session-manager', 'burger', $currentMinor],
+            ['myaccount/silverstripe-session-manager', 'burger', $currentMinorCms4],
             ['myaccount/silverstripe-session-manager', '1.2-release', 'dev-4.10-release'],
             // hardcoded repo version using array
-            ['myaccount/silverstripe-html5', '2', $nextMinor],
+            ['myaccount/silverstripe-html5', '2', $nextMinorCms4],
             ['myaccount/silverstripe-html5', '2.2', '4.10.x-dev'],
             ['myaccount/silverstripe-html5', '2.3', '4.10.x-dev'],
             ['myaccount/silverstripe-html5', '2.4', '4.11.x-dev'],
-            ['myaccount/silverstripe-html5', 'burger', $currentMinor],
+            ['myaccount/silverstripe-html5', 'burger', $currentMinorCms4],
             // force installer unlockedstepped repo
-            ['myaccount/silverstripe-serve', '2', $nextMinor],
-            ['myaccount/silverstripe-behat-extension', '2', $nextMinor],
+            ['myaccount/silverstripe-serve', '2', $nextMinorCms4],
+            ['myaccount/silverstripe-behat-extension', '2', $nextMinorCms4],
         ];
     }
 
@@ -291,6 +340,73 @@ class JobCreatorTest extends TestCase
                     ],
                     [
                         'installer_version' => '5.x-dev',
+                        'php' => '8.3',
+                        'db' => DB_MYSQL_80,
+                        'composer_require_extra' => '',
+                        'composer_args' => '',
+                        'name_suffix' => '',
+                        'phpunit' => 'true',
+                        'phpunit_suite' => 'all',
+                        'phplinting' => 'false',
+                        'phpcoverage' => 'false',
+                        'endtoend' => 'false',
+                        'endtoend_suite' => 'root',
+                        'endtoend_config' => '',
+                        'js' => 'false',
+                        'needs_full_setup' => 'true',
+                        'name' => '8.3 mysql80 phpunit all',
+                    ],
+                ]
+            ],
+            // general test for v6
+            [
+                implode("\n", [
+                    $this->getGenericYml(),
+                    <<<EOT
+                    github_repository: 'myaccount/silverstripe-framework'
+                    github_my_ref: '6'
+                    parent_branch: ''
+                    EOT
+                ]),
+                [
+                    [
+                        'installer_version' => '6.x-dev',
+                        'php' => '8.1',
+                        'db' => DB_MYSQL_57,
+                        'composer_require_extra' => '',
+                        'composer_args' => '--prefer-lowest',
+                        'name_suffix' => '',
+                        'phpunit' => 'true',
+                        'phpunit_suite' => 'all',
+                        'phplinting' => 'false',
+                        'phpcoverage' => 'false',
+                        'endtoend' => 'false',
+                        'endtoend_suite' => 'root',
+                        'endtoend_config' => '',
+                        'js' => 'false',
+                        'needs_full_setup' => 'true',
+                        'name' => '8.1 prf-low mysql57 phpunit all',
+                    ],
+                    [
+                        'installer_version' => '6.x-dev',
+                        'php' => '8.2',
+                        'db' => DB_MARIADB,
+                        'composer_require_extra' => '',
+                        'composer_args' => '',
+                        'name_suffix' => '',
+                        'phpunit' => 'true',
+                        'phpunit_suite' => 'all',
+                        'phplinting' => 'false',
+                        'phpcoverage' => 'false',
+                        'endtoend' => 'false',
+                        'endtoend_suite' => 'root',
+                        'endtoend_config' => '',
+                        'js' => 'false',
+                        'needs_full_setup' => 'true',
+                        'name' => '8.2 mariadb phpunit all',
+                    ],
+                    [
+                        'installer_version' => '6.x-dev',
                         'php' => '8.3',
                         'db' => DB_MYSQL_80,
                         'composer_require_extra' => '',
@@ -454,9 +570,14 @@ class JobCreatorTest extends TestCase
         if (!function_exists('yaml_parse')) {
             $this->markTestSkipped('yaml extension is not installed');
         }
-        $creator = new JobCreator();
-        $json = json_decode($creator->createJson($yml));
-        $this->assertSame($expected, $json->include[0]->installer_version);
+        try {
+            $this->writeInstallerBranchesJson();
+            $creator = new JobCreator();
+            $json = json_decode($creator->createJson($yml));
+            $this->assertSame($expected, $json->include[0]->installer_version);
+        } finally {
+            unlink('__installer_branches.json');
+        }
     }
 
     private function getGenericYml(): string
@@ -681,9 +802,14 @@ class JobCreatorTest extends TestCase
         if ($value !== '') {
             $yml .= "\ndynamic_matrix: $value";
         }
-        $creator = new JobCreator();
-        $json = json_decode($creator->createJson($yml));
-        $this->assertSame($jobCount, count($json->include));
+        try {
+            $this->writeInstallerBranchesJson();
+            $creator = new JobCreator();
+            $json = json_decode($creator->createJson($yml));
+            $this->assertSame($jobCount, count($json->include));
+        } finally {
+            unlink('__installer_branches.json');
+        }
     }
 
     public function provideDynamicMatrix(): array
@@ -773,10 +899,29 @@ class JobCreatorTest extends TestCase
         ];
     }
 
+    private function writeComposerJson(array $composerDeps, string $repoType = '', $filename = '__composer.json')
+    {
+        $composer = new stdClass();
+        if ($repoType) {
+            $composer->type = $repoType;
+        }
+        $composer->require = new stdClass();
+        foreach ($composerDeps as $dep => $version) {
+            $composer->require->{$dep} = $version;
+        }
+        file_put_contents($filename, json_encode($composer, JSON_UNESCAPED_SLASHES));
+    }
+
+    private function writeInstallerBranchesJson()
+    {
+        $installerBranchesJson = $this->getInstallerBranchesJson();
+        file_put_contents('__installer_branches.json', json_encode($installerBranchesJson, JSON_UNESCAPED_SLASHES));
+    }
+
     /**
-     * @dataProvider provideGetInstallerVersionCMS5FromComposer
+     * @dataProvider provideGetInstallerVersionFromComposer
      */
-    public function testGetInstallerVersionCMS5FromComposer(
+    public function testGetInstallerVersionFromComposer(
         string $githubRepository,
         string $branch,
         array $composerDeps,
@@ -794,35 +939,32 @@ class JobCreatorTest extends TestCase
             EOT
         ]);
         try {
+            $this->writeComposerJson($composerDeps, $repoType);
+            $this->writeInstallerBranchesJson();
             $creator = new JobCreator();
             $creator->composerJsonPath = '__composer.json';
-            $composer = new stdClass();
-            if ($repoType) {
-                $composer->type = $repoType;
-            }
-            $composer->require = new stdClass();
-            foreach ($composerDeps as $dep => $version) {
-                $composer->require->{$dep} = $version;
-            }
-            file_put_contents('__composer.json', json_encode($composer, JSON_PRETTY_PRINT + JSON_UNESCAPED_SLASHES));
             $json = json_decode($creator->createJson($yml));
             $this->assertSame($expected, $json->include[0]->installer_version);
         } finally {
             unlink('__composer.json');
+            unlink('__installer_branches.json');
         }
     }
 
-    public function provideGetInstallerVersionCMS5FromComposer(): array
+    public function provideGetInstallerVersionFromComposer(): array
     {
-        $currentMinor = $this->getCurrentMinorInstallerVersion('4') . '.x-dev';
+        $currentMinorCms4 = $this->getCurrentMinorInstallerVersion('4') . '.x-dev';
         return [
             // priority given to branch name
             ['myaccount/silverstripe-framework', '4', [], 'silverstripe-module', '4.x-dev'],
             ['myaccount/silverstripe-framework', '4.10', [], 'silverstripe-vendormodule', '4.10.x-dev'],
-            ['myaccount/silverstripe-framework', 'burger', [], 'silverstripe-theme', $currentMinor],
+            ['myaccount/silverstripe-framework', 'burger', [], 'silverstripe-theme', $currentMinorCms4],
             ['myaccount/silverstripe-framework', '5', [], 'silverstripe-recipe', '5.x-dev'],
             ['myaccount/silverstripe-framework', '5.10', [], 'silverstripe-vendormodule', '5.10.x-dev'],
+            ['myaccount/silverstripe-framework', '6', [], 'silverstripe-recipe', '6.x-dev'],
+            ['myaccount/silverstripe-framework', '6.10', [], 'silverstripe-vendormodule', '6.10.x-dev'],
             // fallback to looking at deps in composer.json, use current minor of installer .x-dev
+            // CMS 5
             ['myaccount/silverstripe-admin', 'mybranch', ['silverstripe/framework' => '5.x-dev'], 'silverstripe-module', '5.x-dev'],
             ['myaccount/silverstripe-admin', 'mybranch', ['silverstripe/framework' => '5.0.x-dev'], 'silverstripe-vendormodule', '5.0.x-dev'],
             ['myaccount/silverstripe-admin', 'mybranch', ['silverstripe/framework' => '^5'], 'silverstripe-theme', '5.2.x-dev'],
@@ -832,6 +974,17 @@ class JobCreatorTest extends TestCase
             ['myaccount/silverstripe-somemodule', '3', ['silverstripe/framework' => '^5'], 'package', ''],
             ['myaccount/silverstripe-somemodule', '3', ['silverstripe/framework' => '^5'], '', ''],
             ['myaccount/silverstripe-somemodule', '3', [], '', ''],
+            // CMS 6 - note some of the 6.x-dev $expected will need to change once once
+            // the `6.0` branches are created - currently only `6` branches exist
+            ['myaccount/silverstripe-admin', 'mybranch', ['silverstripe/framework' => '6.x-dev'], 'silverstripe-module', '6.x-dev'],
+            ['myaccount/silverstripe-admin', 'mybranch', ['silverstripe/framework' => '6.0.x-dev'], 'silverstripe-vendormodule', '6.0.x-dev'],
+            ['myaccount/silverstripe-admin', 'mybranch', ['silverstripe/framework' => '^6'], 'silverstripe-theme', '6.x-dev'],
+            ['myaccount/silverstripe-somemodule', 'mybranch', ['silverstripe/cms' => '^6'], 'silverstripe-recipe', '6.x-dev'],
+            ['myaccount/silverstripe-somemodule', 'mybranch', ['silverstripe/admin' => '^3'], 'silverstripe-vendormodule', '6.x-dev'],
+            ['myaccount/silverstripe-somemodule', '4', ['silverstripe/framework' => '^6'], 'silverstripe-vendormodule', '6.x-dev'],
+            ['myaccount/silverstripe-somemodule', '4', ['silverstripe/framework' => '^6'], 'package', ''],
+            ['myaccount/silverstripe-somemodule', '4', ['silverstripe/framework' => '^6'], '', ''],
+            ['myaccount/silverstripe-somemodule', '4', [], '', ''],
         ];
     }
 
@@ -898,6 +1051,15 @@ class JobCreatorTest extends TestCase
                     '8.1 mysql57 phpunit all'
                 ]
             ],
+            'composerinstall_nophpversion_framework6' => [
+                'true',
+                '',
+                '6.x-dev',
+                'silverstripe-vendormodule',
+                [
+                    '8.1 mysql57 phpunit all'
+                ]
+            ],
             'composerinstall_definedphpversion_framework5' => [
                 'true',
                 '21.99',
@@ -938,6 +1100,17 @@ class JobCreatorTest extends TestCase
                     '8.3 mysql80 phpunit all',
                 ]
             ],
+            'composerupgrade_nophpversion_framework6' => [
+                'false',
+                '',
+                '6.x-dev',
+                'silverstripe-vendormodule',
+                [
+                    '8.1 prf-low mysql57 phpunit all',
+                    '8.2 mariadb phpunit all',
+                    '8.3 mysql80 phpunit all',
+                ]
+            ],
             'composerupgrade_definedphpversion_framework5' => [
                 'false',
                 '21.99',
@@ -953,6 +1126,17 @@ class JobCreatorTest extends TestCase
                 'false',
                 'fish',
                 '5.x-dev',
+                'silverstripe-theme',
+                [
+                    '8.1 prf-low mysql57 phpunit all',
+                    '8.2 mariadb phpunit all',
+                    '8.3 mysql80 phpunit all',
+                ]
+            ],
+            'composerupgrade_invalidphpversion_framework6' => [
+                'false',
+                'fish',
+                '6.x-dev',
                 'silverstripe-theme',
                 [
                     '8.1 prf-low mysql57 phpunit all',
