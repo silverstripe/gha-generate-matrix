@@ -985,6 +985,9 @@ class JobCreatorTest extends TestCase
             ['myaccount/silverstripe-somemodule', '4', ['silverstripe/framework' => '^6'], 'package', ''],
             ['myaccount/silverstripe-somemodule', '4', ['silverstripe/framework' => '^6'], '', ''],
             ['myaccount/silverstripe-somemodule', '4', [], '', ''],
+            // // recipe-plugin and vendor-plugin do not override framework
+            ['myaccount/silverstripe-admin', 'mybranch', ['silverstripe/recipe-plugin' => '^2', 'silverstripe/framework' => '^6'], 'silverstripe-vendormodule', '6.x-dev'],
+            ['myaccount/silverstripe-admin', 'mybranch', ['silverstripe/vendor-plugin' => '^2', 'silverstripe/framework' => '^6'], 'silverstripe-vendormodule', '6.x-dev'],
         ];
     }
 
