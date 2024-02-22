@@ -139,7 +139,6 @@ const CMS_TO_REPO_MAJOR_VERSIONS = [
         'recipe-core' => '5',
         'recipe-form-building' => '2',
         'recipe-kitchen-sink' => '5',
-        'recipe-plugin' => '2',
         'recipe-reporting-tools' => '2',
         'recipe-services' => '2',
         'recipe-testing' => '3',
@@ -165,7 +164,6 @@ const CMS_TO_REPO_MAJOR_VERSIONS = [
         'silverstripe-testsession' => '3',
         'silverstripe-versioned' => '2',
         'silverstripe-versioned-admin' => '2',
-        'vendor-plugin' => '2',
     ],
     '6' => [
         'MinkFacebookWebDriver' => '3',
@@ -178,7 +176,6 @@ const CMS_TO_REPO_MAJOR_VERSIONS = [
         'recipe-core' => '6',
         'recipe-form-building' => '3',
         'recipe-kitchen-sink' => '6',
-        'recipe-plugin' => '3',
         'recipe-reporting-tools' => '3',
         'recipe-services' => '3',
         'recipe-testing' => '4',
@@ -204,7 +201,6 @@ const CMS_TO_REPO_MAJOR_VERSIONS = [
         'silverstripe-testsession' => '4',
         'silverstripe-versioned' => '3',
         'silverstripe-versioned-admin' => '3',
-        'vendor-plugin' => '3',
     ],
 ];
 
