@@ -136,6 +136,23 @@ runs:
         echo "cat __inputs.yml"
         cat __inputs.yml
 
+    - name: Fetch branches
+      id: fetch-branches
+      shell: bash
+      run: |
+        # Gets all branches from GitHub API
+        # https://docs.github.com/en/rest/branches/branches?apiVersion=2022-11-28#list-branches
+        RESP_CODE=$(curl -w %{http_code} -s -o __installer_branches.json \
+        -X GET "https://api.github.com/repos/silverstripe/silverstripe-installer/branches?per_page=100" \
+        -H "Accept: application/vnd.github+json" \
+        -H "Authorization: Bearer ${{ github.token }}" \
+        -H "X-GitHub-Api-Version: 2022-11-28" \
+        )
+        if [[ $RESP_CODE != "200" ]]; then
+          echo "Unable to read list of branches - HTTP response code was $RESP_CODE"
+          exit 1
+        fi
+
     - name: Run php script
       id: php-script
       shell: bash
@@ -143,3 +160,14 @@ runs:
         MATRIX_JSON=$(php ${{ github.action_path }}/action.php)
         echo "MATRIX_JSON: $MATRIX_JSON"
         echo "matrix=${MATRIX_JSON}" >> "$GITHUB_OUTPUT"
+
+    - name: Delete temporary files
+      shell: bash
+      if: always()
+      run: |
+        if [[ -f __installer_branches.json ]]; then
+          rm __installer_branches.json
+        fi
+        if [[ -f __inputs.yml ]]; then
+          rm __inputs.yml
+        fi

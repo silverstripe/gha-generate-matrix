@@ -21,7 +21,10 @@ class JobCreator
     /**
      * Get the correct version of silverstripe/installer to include for the given repository and branch
      */
-    public function getInstallerVersion(): string
+    public function getInstallerVersion(
+        // the following is only used for unit testing
+        string $installerBranchesJson = ''
+    ): string
     {
         $this->repoName = explode('/', $this->githubRepository)[1];
         // repo should not use installer
@@ -93,18 +96,44 @@ class JobCreator
         // fallback to use the next-minor or latest-minor version of installer
         $installerVersions = array_keys(INSTALLER_TO_PHP_VERSIONS);
         $installerVersions = array_filter($installerVersions, fn($version) => substr($version, 0, 1) === $cmsMajor);
+
         if (preg_match('#^[1-9]+[0-9]*$#', $branch)) {
             // next-minor e.g. 4
             return $cmsMajor . '.x-dev';
         } else {
             // current-minor e.g. 4.11
             // remove major versions
-            $installerVersions = array_diff($installerVersions, ['4', '5', '6']);
+            $installerVersions = array_diff($installerVersions, ['4', '5', '6', '7', '8', '9']);
             // get the minor portions of the verisons e.g. [9, 10, 11]
             $minorPortions = array_map(fn($portions) => (int) explode('.', $portions)[1], $installerVersions);
+            if (count($minorPortions) === 0) {
+                return $cmsMajor . '.x-dev';
+            }
             sort($minorPortions);
             $minorPortion = $minorPortions[count($minorPortions) - 1];
             $installerVersion = $cmsMajor . '.' . $minorPortion;
+
+            // It's normal for new major versions branches to exist a year or more before the first release
+            // The corresponding minor version branch will not exist at this time
+            // Check that the minor version of the installer branches exists, if not, fallback to using the major
+            if ($installerBranchesJson) {
+                // this if for unit testing
+                $json = json_decode($installerBranchesJson);
+            } else {
+                // this file is created in action.yml
+                if (!file_exists('__installer_branches.json')) {
+                    throw new Exception('__installer_branches.json was not found');
+                }
+                $json = json_decode(file_get_contents('__installer_branches.json'));
+            }
+            $branches = array_column($json, 'name');
+            // using array_filter() instead of in_array() to ensure we get a strict equality check
+            // e.g. '6' and '6.0' are not equal
+            $branchExists = count(array_filter($branches, fn($branch) => $branch === $installerVersion));
+            if (!$branchExists) {
+                return $cmsMajor . '.x-dev';
+            }
+
             if ($isReleaseBranch) {
                 return 'dev-' . $installerVersion . '-release';
             }
@@ -394,7 +423,7 @@ class JobCreator
                     'phpunit' => true,
                     'phpunit_suite' => $suite,
                 ]);
-            } elseif ($this->getCmsMajor() === '5') {
+            } else {
                 // phpunit tests for cms 5 are run on php 8.1, 8.2 or 8.3 and mysql 8.0 or mariadb
                 $phpToDB = $this->generatePhpToDBMap();
                 foreach ($phpToDB as $php => $db) {
