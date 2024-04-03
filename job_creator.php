@@ -162,6 +162,7 @@ class JobCreator
             'endtoend_suite' => 'root',
             'endtoend_config' => '',
             'js' => false,
+            'doclinting' => false,
             // Needs full setup if installerVersion is set, OR this is one of the no-installer lockstepped repos
             'needs_full_setup' => $this->installerVersion !== '' || in_array($this->repoName, NO_INSTALLER_LOCKSTEPPED_REPOS),
         ];
@@ -559,6 +560,12 @@ class JobCreator
                 'js' => true
             ]);
         }
+        // documentation linting
+        if ($run['doclinting'] && file_exists('.doclintrc')) {
+            $matrix['include'][] = $this->createJob(0, [
+                'doclinting' => true
+            ]);
+        }
         return $matrix;
     }
 
@@ -617,6 +624,7 @@ class JobCreator
                 'phpcoverage',
                 'phpcoverage_force_off',
                 'phplinting',
+                'doclinting',
             ])) {
                 $run[$input] = $this->parseBoolValue($value);
             } else if ($input === 'extra_jobs') {
@@ -713,6 +721,9 @@ class JobCreator
             }
             if ($job['phplinting'] == 'true') {
                 $name[] = 'phplinting';
+            }
+            if ($job['doclinting'] == 'true') {
+                $name[] = 'doclinting';
             }
             $name[] = $job['name_suffix'];
             $name = array_filter($name);

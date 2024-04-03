@@ -40,6 +40,9 @@ inputs:
   js:
     type: boolean
     default: true
+  doclinting:
+    type: boolean
+    default: true
 
 # https://docs.github.com/en/actions/creating-actions/metadata-syntax-for-github-actions
 outputs:
@@ -124,6 +127,7 @@ runs:
         echo "phpcoverage_force_off: ${{ inputs.phpcoverage_force_off }}" >> __inputs.yml
         echo "phplinting: ${{ inputs.phplinting }}" >> __inputs.yml
         echo "phpunit: ${{ inputs.phpunit }}" >> __inputs.yml
+        echo "doclinting: ${{ inputs.doclinting }}" >> __inputs.yml
         echo "dynamic_matrix: ${{ inputs.dynamic_matrix }}" >> __inputs.yml
         echo "simple_matrix: ${{ inputs.simple_matrix }}" >> __inputs.yml
         echo "github_repository: '$GITHUB_REPOSITORY'" >> __inputs.yml
