@@ -1,207 +1,26 @@
 <?php
 
-# Manually update this after each minor CMS release
-const INSTALLER_TO_PHP_VERSIONS = [
-    '4.9' => [
-        '7.1',
-        '7.2',
-        '7.3',
-        '7.4'
-    ],
-    '4.10' => [
-        '7.3',
-        '7.4',
-        '8.0',
-    ],
-    '4.11' => [
-        '7.4',
-        '8.0',
-        '8.1',
-    ],
-    '4' => [
-        '7.4',
-        '8.0',
-        '8.1',
-    ],
-    '5.0' => [
-        '8.1',
-        '8.2',
-    ],
-    '5.1' => [
-        '8.1',
-        '8.2',
-    ],
-    '5.2' => [
-        '8.1',
-        '8.2',
-        '8.3',
-    ],
-    '5' => [
-        '8.1',
-        '8.2',
-        '8.3',
-    ],
-    '6' => [
-        '8.1',
-        '8.2',
-        '8.3',
-    ],
-];
-
 const DB_MYSQL_57 = 'mysql57';
 const DB_MYSQL_57_PDO = 'mysql57pdo';
 const DB_MYSQL_80 = 'mysql80';
 const DB_PGSQL = 'pgsql';
 const DB_MARIADB = 'mariadb';
 
-// Used when determining the version of installer to used. Intentionally doesn't include recipes
-const LOCKSTEPPED_REPOS = [
-    'silverstripe-admin',
-    'silverstripe-asset-admin',
-    'silverstripe-assets',
-    'silverstripe-campaign-admin',
-    'silverstripe-cms',
-    'silverstripe-errorpage',
-    'silverstripe-framework',
-    'silverstripe-reports',
-    'silverstripe-siteconfig',
-    'silverstripe-versioned',
-    'silverstripe-versioned-admin',
+/** Repositories which must not have installer included in the matrix, even though their type suggests they should */
+const NO_INSTALLER_REPOS = [
+    'silverstripe-config',
+];
+
+/** Repositories that either don't have a composer type or have a weird composer type, though we still want installer */
+const FORCE_INSTALLER_REPOS = [
+    'silverstripe-behat-extension',
+    'silverstripe-serve',
     // recipe-solr-search doesn't include recipe-cms or recipe-core unlike our other recipes
     'recipe-solr-search',
     // recipe-blog requires a theme for the unit tests to work, the config and dependency for which are
     // supplied by installer. Just adding a theme as a dev-dependency is insufficient because we'd still
     // lack the yml config to activate that theme
     'recipe-blog',
-];
-
-// lockstepped repos that are "three less" e.g. silverstripe/admin 1 is for CMS 4
-const LOCKSTEPPED_REPOS_VERSION_IS_THREE_LESS = [
-    'silverstripe-admin',
-    'silverstripe-asset-admin',
-    'silverstripe-assets',
-    'silverstripe-campaign-admin',
-    'silverstripe-errorpage',
-    'silverstripe-versioned',
-    'silverstripe-versioned-admin',
-];
-
-// Repositories that do not require silverstripe/installer to be explicitly added as a dependency for testing
-const NO_INSTALLER_LOCKSTEPPED_REPOS = [
-    // these are/include recipe-cms or recipe-core, so we don't want to composer require installer
-    // in .travis.yml they used the 'self' provision rather than 'standard'
-    'recipe-authoring-tools',
-    'recipe-ccl',
-    'recipe-cms',
-    'recipe-collaboration',
-    'recipe-content-blocks',
-    'recipe-core',
-    'recipe-form-building',
-    'recipe-kitchen-sink',
-    'recipe-reporting-tools',
-    'recipe-services',
-    'silverstripe-installer',
-];
-
-const NO_INSTALLER_UNLOCKSTEPPED_REPOS = [
-    'silverstripe-config',
-];
-
-// Repositories that either don't have a composer type or have a weird composer type, though we still want installer
-const FORCE_INSTALLER_UNLOCKEDSTEPPED_REPOS = [
-    'silverstripe-behat-extension',
-    'silverstripe-serve',
-];
-
-const CMS_TO_REPO_MAJOR_VERSIONS = [
-    '4' => [
-        'recipe-authoring-tools' => '1',
-        'recipe-blog' => '1',
-        'recipe-ccl' => '2',
-        'recipe-cms' => '4',
-        'recipe-collaboration' => '1',
-        'recipe-content-blocks' => '2',
-        'recipe-core' => '4',
-        'recipe-form-building' => '1',
-        'recipe-kitchen-sink' => '4',
-        'recipe-reporting-tools' => '1',
-        'recipe-services' => '1',
-        'silverstripe-installer' => '4',
-    ],
-    '5' => [
-        'MinkFacebookWebDriver' => '2',
-        'recipe-authoring-tools' => '2',
-        'recipe-blog' => '2',
-        'recipe-ccl' => '3',
-        'recipe-cms' => '5',
-        'recipe-collaboration' => '2',
-        'recipe-content-blocks' => '3',
-        'recipe-core' => '5',
-        'recipe-form-building' => '2',
-        'recipe-kitchen-sink' => '5',
-        'recipe-reporting-tools' => '2',
-        'recipe-services' => '2',
-        'recipe-testing' => '3',
-        'silverstripe-installer' => '5',
-        'silverstripe-admin' => '2',
-        'silverstripe-asset-admin' => '2',
-        'silverstripe-assets' => '2',
-        'silverstripe-behat-extension' => '5',
-        'silverstripe-campaign-admin' => '2',
-        'silverstripe-cms' => '5',
-        'silverstripe-errorpage' => '2',
-        'silverstripe-event-dispatcher' => '1',
-        'silverstripe-framework' => '5',
-        'silverstripe-frameworktest' => '1',
-        'silverstripe-graphql' => '5',
-        'silverstripe-login-forms' => '5',
-        'silverstripe-mimevalidator' => '3',
-        'silverstripe-registry' => '3',
-        'silverstripe-reports' => '5',
-        'silverstripe-serve' => '3',
-        'silverstripe-session-manager' => '2',
-        'silverstripe-siteconfig' => '5',
-        'silverstripe-testsession' => '3',
-        'silverstripe-versioned' => '2',
-        'silverstripe-versioned-admin' => '2',
-    ],
-    '6' => [
-        'MinkFacebookWebDriver' => '3',
-        'recipe-authoring-tools' => '3',
-        'recipe-blog' => '3',
-        'recipe-ccl' => '4',
-        'recipe-cms' => '6',
-        'recipe-collaboration' => '3',
-        'recipe-content-blocks' => '4',
-        'recipe-core' => '6',
-        'recipe-form-building' => '3',
-        'recipe-kitchen-sink' => '6',
-        'recipe-reporting-tools' => '3',
-        'recipe-services' => '3',
-        'recipe-testing' => '4',
-        'silverstripe-installer' => '6',
-        'silverstripe-admin' => '3',
-        'silverstripe-asset-admin' => '3',
-        'silverstripe-assets' => '3',
-        'silverstripe-behat-extension' => '6',
-        'silverstripe-campaign-admin' => '3',
-        'silverstripe-cms' => '6',
-        'silverstripe-errorpage' => '3',
-        'silverstripe-event-dispatcher' => '2',
-        'silverstripe-framework' => '6',
-        'silverstripe-frameworktest' => '2',
-        'silverstripe-graphql' => '6',
-        'silverstripe-login-forms' => '6',
-        'silverstripe-mimevalidator' => '4',
-        'silverstripe-registry' => '4',
-        'silverstripe-reports' => '6',
-        'silverstripe-serve' => '4',
-        'silverstripe-session-manager' => '3',
-        'silverstripe-siteconfig' => '6',
-        'silverstripe-testsession' => '4',
-        'silverstripe-versioned' => '3',
-        'silverstripe-versioned-admin' => '3',
-    ],
 ];
 
 // use hardcoded.php to bulk update update this after creating a .cow.pat.json

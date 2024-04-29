@@ -3,6 +3,15 @@
 // Used to generate data for consts.php INSTALLER_TO_REPO_MINOR_VERSIONS
 // Copy .cow.pat.json from the current release into the directory this script is being run from (file is .gitignored)
 
+use SilverStripe\SupportedModules\MetaData;
+
+$autoloadPath = __DIR__ . '/vendor/autoload.php';
+if (!file_exists($autoloadPath)) {
+    throw new RuntimeException('Run composer install before this script');
+}
+
+require_once $autoloadPath;
+
 include 'consts.php';
 
 $filename = '.cow.pat.json';
@@ -29,10 +38,12 @@ function repoName(string $name)
 
 function parseNode(string $name, stdClass $node, array &$versions)
 {
+    $repoData = MetaData::getMetaDataByPackagistName($name);
     $repoName = repoName($name);
-    if (!in_array($repoName, LOCKSTEPPED_REPOS) &&
-        !in_array($repoName, NO_INSTALLER_LOCKSTEPPED_REPOS) &&
-        !in_array($repoName, NO_INSTALLER_UNLOCKSTEPPED_REPOS)
+    if (
+        (!isset($repoData['lockstepped']) || !$repoData['lockstepped']) &&
+        (!isset($repoData['type']) || $repoData['type'] !== 'recipe') &&
+        !in_array($repoName, NO_INSTALLER_REPOS)
     ) {
         preg_match('#^([0-9]+\.[0-9]+)#', $node->Version, $m);
         $versions[$repoName] = $m[1];

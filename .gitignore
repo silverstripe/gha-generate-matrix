@@ -1,3 +1,5 @@
 .phpunit.result.cache
 .cow.pat.json
 .vscode
+composer.lock
+vendor/
