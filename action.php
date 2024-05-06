@@ -1,5 +1,12 @@
 <?php
 
+$autoloadPath = __DIR__ . '/vendor/autoload.php';
+if (!file_exists($autoloadPath)) {
+    throw new RuntimeException('Run composer install before this script');
+}
+
+require_once $autoloadPath;
+
 include 'consts.php';
 include 'job_creator.php';
 

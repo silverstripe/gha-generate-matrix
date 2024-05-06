@@ -1,6 +1,7 @@
 <?php
 
 use PHPUnit\Framework\TestCase;
+use SilverStripe\SupportedModules\MetaData;
 
 class JobCreatorTest extends TestCase
 {
@@ -17,7 +18,8 @@ class JobCreatorTest extends TestCase
         $creator = new JobCreator();
         $creator->githubRepository = $githubRepository;
         $creator->repoName = explode('/', $githubRepository)[1];
-        $creator->branch = $branch;
+        $creator->branch = $creator->getCleanedBranch($branch);
+        $creator->parseRepositoryMetadata();
         $actual = $creator->createJob($phpIndex, $opts);
         foreach ($expected as $key => $expectedVal) {
             $this->assertSame($expectedVal, $actual[$key]);
@@ -49,22 +51,22 @@ class JobCreatorTest extends TestCase
             ]],
             // test that NO_INSTALLER_LOCKSTEPPED_REPOS base max PHP version from $branch
             ['myaccount/silverstripe-installer', '4.10', 99, [], [
-                'php' => max(INSTALLER_TO_PHP_VERSIONS['4.10'])
+                'php' => max(MetaData::PHP_VERSIONS_FOR_CMS_RELEASES['4.10'])
             ]],
             ['myaccount/silverstripe-installer', '4.11', 99, [], [
-                'php' => max(INSTALLER_TO_PHP_VERSIONS['4.11'])
+                'php' => max(MetaData::PHP_VERSIONS_FOR_CMS_RELEASES['4.11'])
             ]],
             ['myaccount/silverstripe-installer', '4', 99, [], [
-                'php' => max(INSTALLER_TO_PHP_VERSIONS['4'])
+                'php' => max(MetaData::PHP_VERSIONS_FOR_CMS_RELEASES['4'])
             ]],
             ['myaccount/silverstripe-installer', '5.0', 99, [], [
-                'php' => max(INSTALLER_TO_PHP_VERSIONS['5.0'])
+                'php' => max(MetaData::PHP_VERSIONS_FOR_CMS_RELEASES['5.0'])
             ]],
             ['myaccount/silverstripe-installer', '5', 99, [], [
-                'php' => max(INSTALLER_TO_PHP_VERSIONS['5'])
+                'php' => max(MetaData::PHP_VERSIONS_FOR_CMS_RELEASES['5'])
             ]],
             ['myaccount/silverstripe-installer', '6', 99, [], [
-                'php' => max(INSTALLER_TO_PHP_VERSIONS['6'])
+                'php' => max(MetaData::PHP_VERSIONS_FOR_CMS_RELEASES['6'])
             ]],
         ];
     }
@@ -91,7 +93,8 @@ class JobCreatorTest extends TestCase
             }
             $creator->githubRepository = $githubRepository;
             $creator->repoName = explode('/', $githubRepository)[1];
-            $creator->branch = $branch;
+            $creator->branch = $creator->getCleanedBranch($branch);
+            $creator->parseRepositoryMetadata();
             $actual = $creator->getInstallerVersion($installerBranchesJson);
             $this->assertSame($expected, $actual);
         } finally {
@@ -105,9 +108,7 @@ class JobCreatorTest extends TestCase
     {
         return [
             ['name' => '4'],
-            ['name' => '4-release'],
             ['name' => '4.10'],
-            ['name' => '4.10-release'],
             ['name' => '4.11'],
             ['name' => '4.12'],
             ['name' => '4.13'],
@@ -121,7 +122,7 @@ class JobCreatorTest extends TestCase
 
     private function getCurrentMinorInstallerVersion(string $cmsMajor): string
     {
-        $versions = array_keys(INSTALLER_TO_PHP_VERSIONS);
+        $versions = array_keys(MetaData::PHP_VERSIONS_FOR_CMS_RELEASES);
         $versions = array_filter($versions, fn($version) => substr($version, 0, 1) === $cmsMajor);
         natsort($versions);
         $versions = array_reverse($versions);
@@ -131,7 +132,6 @@ class JobCreatorTest extends TestCase
     public function provideGetInstallerVersion(): array
     {
         $nextMinorCms4 = '4.x-dev';
-        $nextMinorCms4Release = 'dev-' . $this->getCurrentMinorInstallerVersion('4') . '-release';
         $currentMinorCms4 = $this->getCurrentMinorInstallerVersion('4') . '.x-dev';
         return [
             // no-installer repo
@@ -141,8 +141,6 @@ class JobCreatorTest extends TestCase
             ['myaccount/recipe-cms', 'pulls/4/myfeature', ''],
             ['myaccount/recipe-cms', 'pulls/4.10/myfeature', ''],
             ['myaccount/recipe-cms', 'pulls/burger/myfeature', ''],
-            ['myaccount/recipe-cms', '4-release', ''],
-            ['myaccount/recipe-cms', '4.10-release', ''],
             ['myaccount/recipe-cms', '5', ''],
             ['myaccount/recipe-cms', '5.1', ''],
             ['myaccount/recipe-cms', '6', ''],
@@ -154,9 +152,6 @@ class JobCreatorTest extends TestCase
             ['myaccount/silverstripe-framework', 'pulls/4/mybugfix', '4.x-dev'],
             ['myaccount/silverstripe-framework', 'pulls/4.10/mybugfix', '4.10.x-dev'],
             ['myaccount/silverstripe-framework', 'pulls/burger/myfeature', $currentMinorCms4],
-            ['myaccount/silverstripe-framework', '4-release', 'dev-4-release'],
-            ['myaccount/silverstripe-framework', '4.10-release', 'dev-4.10-release'],
-            ['myaccount/silverstripe-framework', 'pulls/4.10-release/some-change', 'dev-4.10-release'],
             ['myaccount/silverstripe-framework', '5', '5.x-dev'],
             ['myaccount/silverstripe-framework', '5.1', '5.1.x-dev'],
             ['myaccount/silverstripe-framework', '6', '6.x-dev'],
@@ -167,9 +162,6 @@ class JobCreatorTest extends TestCase
             ['myaccount/silverstripe-admin', 'pulls/1/mybugfix', '4.x-dev'],
             ['myaccount/silverstripe-admin', 'pulls/1.10/mybugfix', '4.10.x-dev'],
             ['myaccount/silverstripe-admin', 'pulls/burger/myfeature', $currentMinorCms4],
-            ['myaccount/silverstripe-admin', '1-release', 'dev-4-release'],
-            ['myaccount/silverstripe-admin', '1.10-release', 'dev-4.10-release'],
-            ['myaccount/silverstripe-admin', 'pulls/1.10-release/some-change', 'dev-4.10-release'],
             ['myaccount/silverstripe-admin', '2', '5.x-dev'],
             ['myaccount/silverstripe-admin', '2.1', '5.1.x-dev'],
             ['myaccount/silverstripe-admin', '3', '6.x-dev'],
@@ -180,16 +172,12 @@ class JobCreatorTest extends TestCase
             ['myaccount/silverstripe-tagfield', 'pulls/2/mybugfix', $nextMinorCms4],
             ['myaccount/silverstripe-tagfield', 'pulls/2.9/mybugfix', $currentMinorCms4],
             ['myaccount/silverstripe-tagfield', 'pulls/burger/myfeature', $currentMinorCms4],
-            ['myaccount/silverstripe-tagfield', '2-release', 'dev-' . $this->getCurrentMinorInstallerVersion('4') . '-release'],
-            ['myaccount/silverstripe-tagfield', '2.9-release', $nextMinorCms4Release],
-            ['myaccount/silverstripe-tagfield', 'pulls/2.9-release/some-change', $nextMinorCms4Release],
             // non-lockstepped repo, fallback to major version of installer (is missing 6.0 installer branch)
             ['myaccount/silverstripe-tagfield', '4.0', '6.x-dev', [['name' => '6']], ['silverstripe/framework' => '^6']],
             // hardcoded repo version
             ['myaccount/silverstripe-session-manager', '1', $nextMinorCms4],
             ['myaccount/silverstripe-session-manager', '1.2', '4.10.x-dev'],
             ['myaccount/silverstripe-session-manager', 'burger', $currentMinorCms4],
-            ['myaccount/silverstripe-session-manager', '1.2-release', 'dev-4.10-release'],
             // hardcoded repo version using array
             ['myaccount/silverstripe-html5', '2', $nextMinorCms4],
             ['myaccount/silverstripe-html5', '2.2', '4.10.x-dev'],
@@ -635,7 +623,7 @@ class JobCreatorTest extends TestCase
                     parent_branch: '4.10-release'
                     EOT
                 ]),
-                'dev-4.10-release'
+                '4.11.x-dev'
             ],
             [
                 implode("\n", [
@@ -1022,7 +1010,7 @@ class JobCreatorTest extends TestCase
         $yml = implode("\n", [
             str_replace('composer_install: false', 'composer_install: ' . $composerInstall, $this->getGenericYml()),
             <<<EOT
-            github_repository: 'silverstripe/installer'
+            github_repository: 'silverstripe/fake-module'
             github_my_ref: 'mybranch'
             EOT
         ]);

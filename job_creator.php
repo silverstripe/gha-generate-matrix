@@ -1,5 +1,8 @@
 <?php
 
+use SilverStripe\SupportedModules\BranchLogic;
+use SilverStripe\SupportedModules\MetaData;
+
 class JobCreator
 {
     public string $composerJsonPath = 'composer.json';
@@ -10,6 +13,10 @@ class JobCreator
 
     public string $repoName = '';
 
+    private array $repoData = [];
+
+    private array $lockSteppedRepos = [];
+
     private string $installerVersion = '';
 
     private string $parentBranch = '';
@@ -17,6 +24,8 @@ class JobCreator
     private ?string $composerPhpConstraint = '';
 
     private string $phpVersionOverride = '';
+
+    private ?stdClass $composerJsonContent = null;
 
     /**
      * Get the correct version of silverstripe/installer to include for the given repository and branch
@@ -26,21 +35,16 @@ class JobCreator
         string $installerBranchesJson = ''
     ): string
     {
-        $this->repoName = explode('/', $this->githubRepository)[1];
         // repo should not use installer
-        if (in_array($this->repoName, NO_INSTALLER_LOCKSTEPPED_REPOS) || in_array($this->repoName, NO_INSTALLER_UNLOCKSTEPPED_REPOS)) {
+        if (!$this->needsInstallerVersion()) {
             return '';
         }
-        $branch = $this->getCleanedBranch(true);
-        $isReleaseBranch = preg_match('#^[0-9\.]+-release$#', $branch);
-        $cmsMajor = $this->getCmsMajor();
+
+        $cmsMajor = BranchLogic::getCmsMajor($this->repoData, $this->branch, $this->getComposerJsonContent()) ?: MetaData::LOWEST_SUPPORTED_CMS_MAJOR;
         // repo is a lockstepped repo
-        if (in_array($this->repoName, LOCKSTEPPED_REPOS) && (is_numeric($branch) || $isReleaseBranch)) {
-            if ($isReleaseBranch) {
-                return 'dev-' . preg_replace('#^([0-9])#', $cmsMajor, $branch);
-            }
+        if (isset($this->repoData['lockstepped']) && $this->repoData['lockstepped'] && is_numeric($this->branch)) {
             // e.g. ['4', '11']
-            $portions = explode('.', $branch);
+            $portions = explode('.', $this->branch);
             if (count($portions) == 1) {
                 return $cmsMajor . '.x-dev';
             } else {
@@ -52,59 +56,47 @@ class JobCreator
             foreach (INSTALLER_TO_REPO_MINOR_VERSIONS[$installerVersion] as $_repo => $_repoVersions) {
                 $repoVersions = is_array($_repoVersions) ? $_repoVersions : [$_repoVersions];
                 foreach ($repoVersions as $repoVersion) {
-                    if ($this->repoName === $_repo && $repoVersion === preg_replace('#-release$#', '', $branch)) {
-                        if ($isReleaseBranch) {
-                            return 'dev-' . $installerVersion . '-release';
-                        }
+                    if ($this->repoName === $_repo && $repoVersion === preg_replace('#-release$#', '', $this->branch)) {
                         return $installerVersion . '.x-dev';
                     }
                 }
             }
         }
         if (file_exists($this->composerJsonPath)) {
-            $json = json_decode(file_get_contents($this->composerJsonPath));
-            // We shouldn't try to infer the installer version for regular repositories
-            // that weren't already detected via the const-based logic above
-            $silverstripeRepoTypes = [
-                'silverstripe-vendormodule',
-                'silverstripe-module',
-                'silverstripe-recipe',
-                'silverstripe-theme',
-            ];
-            if ((!isset($json->type) || !in_array($json->type, $silverstripeRepoTypes)
-                && !in_array($this->repoName, FORCE_INSTALLER_UNLOCKEDSTEPPED_REPOS)
-            )) {
-                return '';
-            }
+            $json = $this->getComposerJsonContent();
             // has a lockstepped .x-dev requirement in composer.json
-            foreach (LOCKSTEPPED_REPOS as $lockedSteppedRepo) {
-                $composerRepo = 'silverstripe/' . str_replace('silverstripe-', '', $lockedSteppedRepo);
-                if (isset($json->require->{$composerRepo})) {
-                    $version = $json->require->{$composerRepo};
-                    if (preg_match('#^([0-9\.]+)\.x\-dev$#', $version, $matches)) {
-                        $versionNumber = $matches[1];
-                        // If the lockstepped dependency is "three less" (e.g. silverstripe/admin is 3 major
-                        // versions behind silverstripe/installer), account for that here.
-                        if (in_array($lockedSteppedRepo, LOCKSTEPPED_REPOS_VERSION_IS_THREE_LESS)) {
-                            $versionNumber += 3;
+            foreach ($this->lockSteppedRepos as $lockedSteppedRepo => $majorVersionMapping) {
+                if (isset($json->require->{$lockedSteppedRepo})) {
+                    $version = $json->require->{$lockedSteppedRepo};
+                    if (preg_match('#^([0-9]+)(\.[0-9]+)?\.x\-dev$#', $version, $matches)) {
+                        $dependencyMajorVersion = $matches[1];
+                        $dependencyMinorSuffix = $matches[2] ?? null;
+                        $versionNumber = null;
+                        foreach ($majorVersionMapping as $cmsMajorFromMap => $repoBranches) {
+                            if (is_numeric($cmsMajorFromMap) && in_array($dependencyMajorVersion, $repoBranches)) {
+                                $versionNumber = $cmsMajorFromMap . $dependencyMinorSuffix;
+                                break;
+                            }
                         }
-                        return $versionNumber . '.x-dev';
+                        if ($versionNumber !== null) {
+                            return $versionNumber . '.x-dev';
+                        }
                     }
                 }
             }
         }
         // fallback to use the next-minor or latest-minor version of installer
-        $installerVersions = array_keys(INSTALLER_TO_PHP_VERSIONS);
+        $installerVersions = array_keys(MetaData::PHP_VERSIONS_FOR_CMS_RELEASES);
         $installerVersions = array_filter($installerVersions, fn($version) => substr($version, 0, 1) === $cmsMajor);
 
-        if (preg_match('#^[1-9]+[0-9]*$#', $branch)) {
+        if (preg_match('#^[1-9]+[0-9]*$#', $this->branch)) {
             // next-minor e.g. 4
             return $cmsMajor . '.x-dev';
         } else {
             // current-minor e.g. 4.11
             // remove major versions
-            $installerVersions = array_diff($installerVersions, ['4', '5', '6', '7', '8', '9']);
-            // get the minor portions of the verisons e.g. [9, 10, 11]
+            $installerVersions = array_filter($installerVersions, fn ($v) => !ctype_digit((string) $v));
+            // get the minor portions of the versions e.g for ['4.9', '4.10', '4.11'] this returns [9, 10, 11]
             $minorPortions = array_map(fn($portions) => (int) explode('.', $portions)[1], $installerVersions);
             if (count($minorPortions) === 0) {
                 return $cmsMajor . '.x-dev';
@@ -134,13 +126,10 @@ class JobCreator
                 return $cmsMajor . '.x-dev';
             }
 
-            if ($isReleaseBranch) {
-                return 'dev-' . $installerVersion . '-release';
-            }
             return $installerVersion . '.x-dev';
         }
     }
-    
+
     public function createJob(int $phpIndex, array $opts): array
     {
         $default = [
@@ -163,8 +152,8 @@ class JobCreator
             'endtoend_config' => '',
             'js' => false,
             'doclinting' => false,
-            // Needs full setup if installerVersion is set, OR this is one of the no-installer lockstepped repos
-            'needs_full_setup' => $this->installerVersion !== '' || in_array($this->repoName, NO_INSTALLER_LOCKSTEPPED_REPOS),
+            // Needs full setup if installerVersion is set, OR this is a recipe
+            'needs_full_setup' => $this->installerVersion !== '' || (!empty($this->repoData) && $this->repoData['type'] === 'recipe'),
         ];
         return array_merge($default, $opts);
     }
@@ -181,7 +170,7 @@ class JobCreator
                 $this->composerPhpConstraint = null;
                 return true;
             }
-            $json = json_decode(file_get_contents($this->composerJsonPath));
+            $json = $this->getComposerJsonContent();
             if (!isset($json->require->php)) {
                 $this->composerPhpConstraint = null;
                 return true;
@@ -248,16 +237,15 @@ class JobCreator
      * Get the branch name from the installer version and left only the minor version
      * e.g. 4.10.x-dev -> 4.10
      */
-    private function getBranchName(): string
+    private function getInstallerBranch(): string
     {
         $version = str_replace('.x-dev', '', $this->installerVersion);
-        if (in_array($this->repoName, NO_INSTALLER_LOCKSTEPPED_REPOS)) {
-            $cmsMajor = $this->getCmsMajor();
-            $branch = $this->getCleanedBranch();
-            if (preg_match('#^[1-9]$#', $branch)) {
-                $version = $cmsMajor;
-            } elseif (preg_match('#^[1-9]\.([0-9]+)$#', $branch, $matches)) {
+        if (!in_array($this->repoName, FORCE_INSTALLER_REPOS) && isset($this->repoData['type']) && $this->repoData['type'] === 'recipe') {
+            $cmsMajor = BranchLogic::getCmsMajor($this->repoData, $this->branch, $this->getComposerJsonContent()) ?: MetaData::LOWEST_SUPPORTED_CMS_MAJOR;
+            if (preg_match('#^[1-9]\.([0-9]+)$#', $this->branch, $matches)) {
                 $version = sprintf('%d.%d', $cmsMajor, $matches[1]);
+            } else {
+                $version = $cmsMajor;
             }
         }
 
@@ -291,99 +279,10 @@ class JobCreator
                 return $phpVersion;
             }
         }
-        
+
         throw new Exception("No valid PHP version allowed");
     }
 
-    private function getCmsMajor(): string
-    {
-        $cmsMajor = $this->getCmsMajorFromBranch();
-        if ($cmsMajor == '') {
-            $cmsMajor = $this->getCmsMajorFromComposerJson();
-        }
-        // fallback to cms 4
-        return $cmsMajor ?: '4';
-    }
-
-    private function getCmsMajorFromBranch(): string
-    {
-        $branch = $this->getCleanedBranch();
-        $branchMajor = '';
-        if (preg_match('#^[1-9]$#', $branch)) {
-            $branchMajor = $branch;
-        } elseif (preg_match('#^([1-9])\.[0-9]+$#', $branch, $matches)) {
-            $branchMajor = $matches[1];
-        }
-        foreach (array_keys(CMS_TO_REPO_MAJOR_VERSIONS) as $cmsMajor) {
-            if (isset(CMS_TO_REPO_MAJOR_VERSIONS[$cmsMajor][$this->repoName])) {
-                if (CMS_TO_REPO_MAJOR_VERSIONS[$cmsMajor][$this->repoName] === $branchMajor) {
-                    return $cmsMajor;
-                }
-            }
-        }
-        return '';
-    }
-
-    private function getCmsMajorFromComposerJson(): string
-    {
-        if (!file_exists($this->composerJsonPath)) {
-            return '';
-        }
-        $json = json_decode(file_get_contents($this->composerJsonPath));
-        foreach ($json->require as $dep => $version) {
-            // will match the first numeric character
-            if (!preg_match('#([0-9])#', $version, $m)) {
-                continue;
-            }
-            $composerVersionMajor = $m[1];
-            if (strpos($dep, '/') === false) {
-                continue;
-            }
-            $repo = '';
-            if (preg_match('#^silverstripe/recipe-#', $dep) ||
-                in_array($dep, [
-                'silverstripe/comment-notifications',
-                'silverstripe/MinkFacebookWebDriver',
-                'silverstripe/vendor-plugin',
-            ])) {
-                $repo = str_replace('silverstripe/', '', $dep);
-            } elseif (preg_match('#^(silverstripe|cwp)/#', $dep)) {
-                $repo = str_replace('/', '-', $dep);
-            }
-            foreach (array_keys(CMS_TO_REPO_MAJOR_VERSIONS) as $cmsMajor) {
-                if (isset(CMS_TO_REPO_MAJOR_VERSIONS[$cmsMajor][$repo])) {
-                    if (CMS_TO_REPO_MAJOR_VERSIONS[$cmsMajor][$repo] === $composerVersionMajor) {
-                        return $cmsMajor;
-                    }
-                }
-            }
-        }
-        return '';
-    }
-
-    private function getCleanedBranch(bool $allowReleaseSuffix = false): string
-    {
-        $branch = $this->branch;
-        // e.g. pulls/4.10/some-bugfix or pulls/4/some-feature
-        // for push events to the creative-commoners account
-        if (preg_match('#^pulls/([0-9\.]+(-release)?)/#', $branch, $matches)) {
-            $branch = $matches[1];
-        }
-        // fallback to parent branch if available
-        if (
-            !is_numeric($branch) &&
-            $this->parentBranch && 
-            (is_numeric($this->parentBranch) || preg_match('#^[0-9\.]+-release$#', $this->parentBranch))
-        ) {
-            $branch = $this->parentBranch;
-        }
-        // e.g. 4.10-release
-        if (!$allowReleaseSuffix) {
-            $branch = preg_replace('#^([0-9\.]+)-release$#', '$1', $branch);
-        }
-        return $branch;
-    }
-    
     private function parseBoolValue($value): bool
     {
         return ($value === true || $value === 'true');
@@ -408,17 +307,18 @@ class JobCreator
                 'phpunit' => true,
                 'phpunit_suite' => $suite,
             ]);
-            // this same mysql pdo test is also created for the phpcoverage job, so only add it here if
-            // not creating a phpcoverage job.
-            // note: phpcoverage also runs unit tests
-            if ($this->getCmsMajor() === '4' && !$this->doRunPhpCoverage($run)) {
-                $matrix['include'][] = $this->createJob(1, [
-                    'db' => DB_MYSQL_57_PDO,
-                    'phpunit' => true,
-                    'phpunit_suite' => $suite,
-                ]);
-            }
-            if ($this->getCmsMajor() === '4') {
+            $cmsMajor = BranchLogic::getCmsMajor($this->repoData, $this->branch, $this->getComposerJsonContent()) ?: MetaData::LOWEST_SUPPORTED_CMS_MAJOR;
+            if ($cmsMajor === '4') {
+                if (!$this->doRunPhpCoverage($run)) {
+                    // this same mysql pdo test is also created for the phpcoverage job, so only add it here if
+                    // not creating a phpcoverage job.
+                    // note: phpcoverage also runs unit tests
+                    $matrix['include'][] = $this->createJob(1, [
+                        'db' => DB_MYSQL_57_PDO,
+                        'phpunit' => true,
+                        'phpunit_suite' => $suite,
+                    ]);
+                }
                 $matrix['include'][] = $this->createJob(3, [
                     'db' => DB_MYSQL_80,
                     'phpunit' => true,
@@ -444,7 +344,7 @@ class JobCreator
      */
     private function getListOfPhpVersionsByBranchName(): array
     {
-        return INSTALLER_TO_PHP_VERSIONS[$this->getBranchName()] ?? INSTALLER_TO_PHP_VERSIONS['4'];
+        return MetaData::PHP_VERSIONS_FOR_CMS_RELEASES[$this->getInstallerBranch()] ?? MetaData::PHP_VERSIONS_FOR_CMS_RELEASES['4'];
     }
 
     /**
@@ -515,9 +415,10 @@ class JobCreator
                 'phplinting' => true
             ]);
         }
+        $cmsMajor = BranchLogic::getCmsMajor($this->repoData, $this->branch, $this->getComposerJsonContent()) ?: MetaData::LOWEST_SUPPORTED_CMS_MAJOR;
         // phpcoverage also runs unit tests
         if ($this->doRunPhpCoverage($run, $this->githubRepository)) {
-            if ($simpleMatrix || $composerInstall || $this->getCmsMajor() !== '4') {
+            if ($simpleMatrix || $composerInstall || $cmsMajor !== '4') {
                 $matrix['include'][] = $this->createJob(0, [
                     'phpcoverage' => true
                 ]);
@@ -530,7 +431,6 @@ class JobCreator
         }
         // endtoend / behat
         if ($run['endtoend'] && file_exists('behat.yml')) {
-            $cmsMajor = $this->getCmsMajor();
             $graphql3 = !$simpleMatrix && $cmsMajor == '4';
             $job = $this->createJob(0, [
                 'endtoend' => true,
@@ -593,11 +493,9 @@ class JobCreator
     public function createJson(string $yml): string
     {
         $inputs = $this->getInputs($yml);
-        // $myRef will either be a branch for push (i.e cron) and pull-request (target branch), or a semver tag
-        $myRef = $inputs['github_my_ref'];
-        $unstableTagRx = '#^([0-9]+)\.([0-9]+)\.[0-9]+-((alpha|beta|rc))[0-9]+$#';
-        $isTag = preg_match('#^([0-9]+)\.([0-9]+)\.[0-9]+$#', $myRef, $m) || preg_match($unstableTagRx, $myRef, $m);
-        $this->branch = $isTag ? sprintf('%d.%d', $m[1], $m[2]) : $myRef;
+        $this->githubRepository = $inputs['github_repository'];
+        $this->repoName = explode('/', $this->githubRepository)[1];
+        $this->parseRepositoryMetadata();
 
         // parent branch is a best attempt to get the parent branch of the branch via bash
         // it's used for working out the version of installer to use on github push events
@@ -605,7 +503,12 @@ class JobCreator
             $this->parentBranch = $inputs['parent_branch'];
         }
 
-        $this->githubRepository = $inputs['github_repository'];
+        // $myRef will either be a branch for push (i.e cron) and pull-request (target branch), or a semver tag
+        $myRef = $inputs['github_my_ref'];
+        $unstableTagRx = '#^([0-9]+)\.([0-9]+)\.[0-9]+-((alpha|beta|rc))[0-9]+$#';
+        $isTag = preg_match('#^([0-9]+)\.([0-9]+)\.[0-9]+$#', $myRef, $m) || preg_match($unstableTagRx, $myRef, $m);
+        $this->branch = $this->getCleanedBranch($isTag ? sprintf('%d.%d', $m[1], $m[2]) : $myRef);
+
         $this->installerVersion = $this->getInstallerVersion();
         if (preg_match($unstableTagRx, $myRef, $m)) {
             $this->installerVersion = str_replace('.x-dev', '.0-' . $m[3] . '1', $this->installerVersion);
@@ -647,7 +550,7 @@ class JobCreator
         $matrix = ['include' => []];
 
         if ($composerInstall) {
-            $json = json_decode(file_get_contents($this->composerJsonPath));
+            $json = $this->getComposerJsonContent();
             if (isset($json->config->platform->php) && preg_match('#^[0-9\.]+$#', $json->config->platform->php)) {
                 $this->phpVersionOverride = $json->config->platform->php;
             }
@@ -736,5 +639,77 @@ class JobCreator
         $json = preg_replace("#^ +#", "", $json);
         $json = str_replace("\n", '', $json);
         return trim($json);
+    }
+
+    public function parseRepositoryMetadata()
+    {
+        $this->repoData = MetaData::getMetaDataForRepository($this->githubRepository, true);
+        $this->lockSteppedRepos = MetaData::getMetaDataForLocksteppedRepos();
+    }
+
+    public function getCleanedBranch(string $branch): string
+    {
+        // e.g. pulls/4.10/some-bugfix or pulls/4/some-feature
+        // for push events to the creative-commoners account
+        if (preg_match('#^pulls/([0-9]+(\.[0-9]+)*)/#', $branch, $matches)) {
+            return $matches[1];
+        }
+        // fallback to parent branch if available
+        if (
+            !$this->branchIsSemver($branch) &&
+            $this->parentBranch &&
+            $this->branchIsSemver($this->parentBranch)
+        ) {
+            return $this->parentBranch;
+        }
+        return $branch;
+    }
+
+    private function branchIsSemver(string $branch): bool
+    {
+        return preg_match('/^[0-9]+(\.[0-9]+)*$/', $branch);
+    }
+
+    private function needsInstallerVersion(): bool
+    {
+        if (in_array($this->repoName, FORCE_INSTALLER_REPOS)) {
+            return true;
+        }
+        if (in_array($this->repoName, NO_INSTALLER_REPOS)) {
+            return false;
+        }
+        // We shouldn't try to infer the installer version for regular repositories
+        // that we don't know anything about
+        if (empty($this->repoData)) {
+            if (!file_exists($this->composerJsonPath)) {
+                return false;
+            }
+            $json = $this->getComposerJsonContent();
+            $silverstripeRepoTypes = [
+                'silverstripe-vendormodule',
+                'silverstripe-module',
+                'silverstripe-recipe',
+                'silverstripe-theme',
+            ];
+            return isset($json->type) && in_array($json->type, $silverstripeRepoTypes);
+        }
+        if ($this->repoData['type'] === 'recipe') {
+            return false;
+        }
+        return true;
+    }
+
+    private function getComposerJsonContent(): ?stdClass
+    {
+        if (!$this->composerJsonContent) {
+            if (!file_exists($this->composerJsonPath)) {
+                return null;
+            }
+            $this->composerJsonContent = json_decode(file_get_contents($this->composerJsonPath));
+            if ($this->composerJsonContent === null) {
+                throw new RuntimeException('Could not decode composer.json - last error was: ' . json_last_error_msg());
+            }
+        }
+        return $this->composerJsonContent;
     }
 }

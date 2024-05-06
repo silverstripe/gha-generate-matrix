@@ -96,6 +96,24 @@ runs:
       with:
         php-version: '8.1'
         extensions: yaml
+        tools: composer:v2
+
+    # This is shared between runs, not just jobs. It means the first time the repo runs the job it'll
+    # need to download requirements for the first time, after that it will be plenty quick
+    # https://docs.github.com/en/actions/advanced-guides/caching-dependencies-to-speed-up-workflows
+    - name: Enable shared composer cache
+      uses: actions/cache@88522ab9f39a2ea568f7027eddc7d8d8bc9d59c8 # @v3.3.1
+      with:
+        path: ~/.cache/composer
+        key: shared-composer-cache
+
+    # Install composer dependencies for this action itself
+    - name: Composer
+      shell: bash
+      run: |
+        cd ${{ github.action_path }}
+        composer install
+        cd -
 
     - name: Create __inputs.yml
       shell: bash
@@ -174,4 +192,10 @@ runs:
         fi
         if [[ -f __inputs.yml ]]; then
           rm __inputs.yml
+        fi
+        if [[ -f ${{ github.action_path }}/composer.lock ]]; then
+          rm ${{ github.action_path }}/composer.lock
+        fi
+        if [[ -d ${{ github.action_path }}/vendor ]]; then
+          rm -rf ${{ github.action_path }}/vendor
         fi
