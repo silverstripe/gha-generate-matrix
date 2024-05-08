@@ -678,25 +678,25 @@ class JobCreator
         if (in_array($this->repoName, NO_INSTALLER_REPOS)) {
             return false;
         }
-        // We shouldn't try to infer the installer version for regular repositories
-        // that we don't know anything about
-        if (empty($this->repoData)) {
-            if (!file_exists($this->composerJsonPath)) {
-                return false;
-            }
-            $json = $this->getComposerJsonContent();
-            $silverstripeRepoTypes = [
-                'silverstripe-vendormodule',
-                'silverstripe-module',
-                'silverstripe-recipe',
-                'silverstripe-theme',
-            ];
-            return isset($json->type) && in_array($json->type, $silverstripeRepoTypes);
+        // Recipes don't need installer unless they're handled in FORCE_INSTALLER_REPOS above
+        // Type "other" is things like vendor-plugin which don't need installer
+        // All other types do need installer
+        if (!empty($this->repoData) && isset($this->repoData['type'])) {
+            return $this->repoData['type'] !== 'recipe' && $this->repoData['type'] !== 'other';
         }
-        if ($this->repoData['type'] === 'recipe') {
+        // We shouldn't try to infer the installer version for regular repositories
+        if (!file_exists($this->composerJsonPath)) {
             return false;
         }
-        return true;
+        $json = $this->getComposerJsonContent();
+        // Only include installer for Silverstipe CMS modules
+        $silverstripeRepoTypes = [
+            'silverstripe-vendormodule',
+            'silverstripe-module',
+            'silverstripe-recipe',
+            'silverstripe-theme',
+        ];
+        return isset($json->type) && in_array($json->type, $silverstripeRepoTypes);
     }
 
     private function getComposerJsonContent(): ?stdClass

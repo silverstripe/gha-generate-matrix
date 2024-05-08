@@ -79,7 +79,8 @@ class JobCreatorTest extends TestCase
         string $branch,
         string $expected,
         array $customInstallerBranches = [],
-        array $customComposerDeps = []
+        array $customComposerDeps = [],
+        string $packageType = ''
     ): void {
         try {
             $installerBranchesJson = json_encode($this->getInstallerBranchesJson());
@@ -87,9 +88,9 @@ class JobCreatorTest extends TestCase
                 $installerBranchesJson = json_encode($customInstallerBranches);
             }
             $creator = new JobCreator();
-            if ($customComposerDeps) {
-                $this->writeComposerJson($customComposerDeps, 'silverstripe-module');
-                $creator->composerJsonPath = '__composer.json';
+            $creator->composerJsonPath = '__composer.json';
+            if ($customComposerDeps || $packageType) {
+                $this->writeComposerJson($customComposerDeps, $packageType);
             }
             $creator->githubRepository = $githubRepository;
             $creator->repoName = explode('/', $githubRepository)[1];
@@ -135,58 +136,69 @@ class JobCreatorTest extends TestCase
         $currentMinorCms4 = $this->getCurrentMinorInstallerVersion('4') . '.x-dev';
         return [
             // no-installer repo
-            ['myaccount/recipe-cms', '4', ''],
-            ['myaccount/recipe-cms', '4.10', ''],
-            ['myaccount/recipe-cms', 'burger', ''],
-            ['myaccount/recipe-cms', 'pulls/4/myfeature', ''],
-            ['myaccount/recipe-cms', 'pulls/4.10/myfeature', ''],
-            ['myaccount/recipe-cms', 'pulls/burger/myfeature', ''],
-            ['myaccount/recipe-cms', '5', ''],
-            ['myaccount/recipe-cms', '5.1', ''],
-            ['myaccount/recipe-cms', '6', ''],
-            ['myaccount/recipe-cms', '6.0', ''],
+            'recipe-cms1' => ['myaccount/recipe-cms', '4', ''],
+            'recipe-cms2' => ['myaccount/recipe-cms', '4.10', ''],
+            'recipe-cms3' => ['myaccount/recipe-cms', 'burger', ''],
+            'recipe-cms4' => ['myaccount/recipe-cms', 'pulls/4/myfeature', ''],
+            'recipe-cms5' => ['myaccount/recipe-cms', 'pulls/4.10/myfeature', ''],
+            'recipe-cms6' => ['myaccount/recipe-cms', 'pulls/burger/myfeature', ''],
+            'recipe-cms7' => ['myaccount/recipe-cms', '5', ''],
+            'recipe-cms8' => ['myaccount/recipe-cms', '5.1', ''],
+            'recipe-cms9' => ['myaccount/recipe-cms', '6', ''],
+            'recipe-cms10' => ['myaccount/recipe-cms', '6.0', ''],
             // lockstepped repo with 4.* naming
-            ['myaccount/silverstripe-framework', '4', '4.x-dev'],
-            ['myaccount/silverstripe-framework', '4.10', '4.10.x-dev'],
-            ['myaccount/silverstripe-framework', 'burger', $currentMinorCms4],
-            ['myaccount/silverstripe-framework', 'pulls/4/mybugfix', '4.x-dev'],
-            ['myaccount/silverstripe-framework', 'pulls/4.10/mybugfix', '4.10.x-dev'],
-            ['myaccount/silverstripe-framework', 'pulls/burger/myfeature', $currentMinorCms4],
-            ['myaccount/silverstripe-framework', '5', '5.x-dev'],
-            ['myaccount/silverstripe-framework', '5.1', '5.1.x-dev'],
-            ['myaccount/silverstripe-framework', '6', '6.x-dev'],
+            'framework1' => ['myaccount/silverstripe-framework', '4', '4.x-dev'],
+            'framework2' => ['myaccount/silverstripe-framework', '4.10', '4.10.x-dev'],
+            'framework3' => ['myaccount/silverstripe-framework', 'burger', $currentMinorCms4],
+            'framework4' => ['myaccount/silverstripe-framework', 'pulls/4/mybugfix', '4.x-dev'],
+            'framework5' => ['myaccount/silverstripe-framework', 'pulls/4.10/mybugfix', '4.10.x-dev'],
+            'framework6' => ['myaccount/silverstripe-framework', 'pulls/burger/myfeature', $currentMinorCms4],
+            'framework7' => ['myaccount/silverstripe-framework', '5', '5.x-dev'],
+            'framework8' => ['myaccount/silverstripe-framework', '5.1', '5.1.x-dev'],
+            'framework9' => ['myaccount/silverstripe-framework', '6', '6.x-dev'],
             // lockstepped repo with 1.* naming
-            ['myaccount/silverstripe-admin', '1', '4.x-dev'],
-            ['myaccount/silverstripe-admin', '1.10', '4.10.x-dev'],
-            ['myaccount/silverstripe-admin', 'burger', $currentMinorCms4],
-            ['myaccount/silverstripe-admin', 'pulls/1/mybugfix', '4.x-dev'],
-            ['myaccount/silverstripe-admin', 'pulls/1.10/mybugfix', '4.10.x-dev'],
-            ['myaccount/silverstripe-admin', 'pulls/burger/myfeature', $currentMinorCms4],
-            ['myaccount/silverstripe-admin', '2', '5.x-dev'],
-            ['myaccount/silverstripe-admin', '2.1', '5.1.x-dev'],
-            ['myaccount/silverstripe-admin', '3', '6.x-dev'],
+            'admin1' => ['myaccount/silverstripe-admin', '1', '4.x-dev'],
+            'admin2' => ['myaccount/silverstripe-admin', '1.10', '4.10.x-dev'],
+            'admin3' => ['myaccount/silverstripe-admin', 'burger', $currentMinorCms4],
+            'admin4' => ['myaccount/silverstripe-admin', 'pulls/1/mybugfix', '4.x-dev'],
+            'admin5' => ['myaccount/silverstripe-admin', 'pulls/1.10/mybugfix', '4.10.x-dev'],
+            'admin6' => ['myaccount/silverstripe-admin', 'pulls/burger/myfeature', $currentMinorCms4],
+            'admin7' => ['myaccount/silverstripe-admin', '2', '5.x-dev'],
+            'admin8' => ['myaccount/silverstripe-admin', '2.1', '5.1.x-dev'],
+            'admin9' => ['myaccount/silverstripe-admin', '3', '6.x-dev'],
             // non-lockedstepped repo
-            ['myaccount/silverstripe-tagfield', '2', $nextMinorCms4],
-            ['myaccount/silverstripe-tagfield', '2.9', $currentMinorCms4],
-            ['myaccount/silverstripe-tagfield', 'burger', $currentMinorCms4],
-            ['myaccount/silverstripe-tagfield', 'pulls/2/mybugfix', $nextMinorCms4],
-            ['myaccount/silverstripe-tagfield', 'pulls/2.9/mybugfix', $currentMinorCms4],
-            ['myaccount/silverstripe-tagfield', 'pulls/burger/myfeature', $currentMinorCms4],
+            'tagfield1' => ['myaccount/silverstripe-tagfield', '2', $nextMinorCms4],
+            'tagfield2' => ['myaccount/silverstripe-tagfield', '2.9', $currentMinorCms4],
+            'tagfield3' => ['myaccount/silverstripe-tagfield', 'burger', $currentMinorCms4],
+            'tagfield4' => ['myaccount/silverstripe-tagfield', 'pulls/2/mybugfix', $nextMinorCms4],
+            'tagfield5' => ['myaccount/silverstripe-tagfield', 'pulls/2.9/mybugfix', $currentMinorCms4],
+            'tagfield6' => ['myaccount/silverstripe-tagfield', 'pulls/burger/myfeature', $currentMinorCms4],
             // non-lockstepped repo, fallback to major version of installer (is missing 6.0 installer branch)
-            ['myaccount/silverstripe-tagfield', '4.0', '6.x-dev', [['name' => '6']], ['silverstripe/framework' => '^6']],
+            'tagfield7' => ['myaccount/silverstripe-tagfield', '4.0', '6.x-dev', [['name' => '6']], ['silverstripe/framework' => '^6']],
             // hardcoded repo version
-            ['myaccount/silverstripe-session-manager', '1', $nextMinorCms4],
-            ['myaccount/silverstripe-session-manager', '1.2', '4.10.x-dev'],
-            ['myaccount/silverstripe-session-manager', 'burger', $currentMinorCms4],
+            'session-manager1' => ['myaccount/silverstripe-session-manager', '1', $nextMinorCms4],
+            'session-manager2' => ['myaccount/silverstripe-session-manager', '1.2', '4.10.x-dev'],
+            'session-manager3' => ['myaccount/silverstripe-session-manager', 'burger', $currentMinorCms4],
             // hardcoded repo version using array
-            ['myaccount/silverstripe-html5', '2', $nextMinorCms4],
-            ['myaccount/silverstripe-html5', '2.2', '4.10.x-dev'],
-            ['myaccount/silverstripe-html5', '2.3', '4.10.x-dev'],
-            ['myaccount/silverstripe-html5', '2.4', '4.11.x-dev'],
-            ['myaccount/silverstripe-html5', 'burger', $currentMinorCms4],
+            'html5-1' => ['myaccount/silverstripe-html5', '2', $nextMinorCms4],
+            'html5-2' => ['myaccount/silverstripe-html5', '2.2', '4.10.x-dev'],
+            'html5-3' => ['myaccount/silverstripe-html5', '2.3', '4.10.x-dev'],
+            'html5-4' => ['myaccount/silverstripe-html5', '2.4', '4.11.x-dev'],
+            'html5-5' => ['myaccount/silverstripe-html5', 'burger', $currentMinorCms4],
             // force installer unlockedstepped repo
-            ['myaccount/silverstripe-serve', '2', $nextMinorCms4],
-            ['myaccount/silverstripe-behat-extension', '2', $nextMinorCms4],
+            'serve1' => ['myaccount/silverstripe-serve', '2', $nextMinorCms4],
+            'behat1' => ['myaccount/silverstripe-behat-extension', '2', $nextMinorCms4],
+            // repos that shouldn't have installer
+            'vendor-plugin1' => ['myaccount/vendor-plugin', '1', ''],
+            'vendor-plugin2' => ['myaccount/vendor-plugin', '2', ''],
+            'recipe-plugin1' => ['myaccount/recipe-plugin', '1', ''],
+            // random third-party repo
+            'random-notype' => ['myaccount/my-module', '4.0', '', [['name' => '6']], ['silverstripe/framework' => '^6']],
+            'random-module' => ['myaccount/my-module', '4.0', '6.x-dev', [['name' => '6']], ['silverstripe/framework' => '^6'], 'silverstripe-module'],
+            'random-vendormodule' => ['myaccount/my-module', '4.0', '6.x-dev', [['name' => '6']], ['silverstripe/framework' => '^6'], 'silverstripe-vendormodule'],
+            'random-recipe' => ['myaccount/my-module', '4.0', '6.x-dev', [['name' => '6']], ['silverstripe/framework' => '^6'], 'silverstripe-recipe'],
+            'random-theme' => ['myaccount/my-module', '4.0', '6.x-dev', [['name' => '6']], ['silverstripe/framework' => '^6'], 'silverstripe-theme'],
+            'random-notype-nodeps' => ['myaccount/my-module', '4.0', '', [['name' => '6']]],
         ];
     }
 
