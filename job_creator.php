@@ -153,7 +153,7 @@ class JobCreator
             'js' => false,
             'doclinting' => false,
             // Needs full setup if installerVersion is set, OR this is a recipe
-            'needs_full_setup' => $this->installerVersion !== '' || (!empty($this->repoData) && $this->repoData['type'] === 'recipe'),
+            'needs_full_setup' => $this->installerVersion !== '' || (isset($this->repoData['type']) && $this->repoData['type'] === 'recipe'),
         ];
         return array_merge($default, $opts);
     }
