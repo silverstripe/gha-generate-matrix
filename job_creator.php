@@ -132,10 +132,26 @@ class JobCreator
 
     public function createJob(int $phpIndex, array $opts): array
     {
+        $isCoreModule = false; // TODO: implement core module detection - for now
+        // just pretend everything is non-core and increment in gha-ci (core modules won't install
+        // until their module minor matches the minor version)
+        $isPreferLoweset = strpos($opts['composer_args'] ?? '', '--prefer-lowest') !== false;
+        $installerVersion = $this->installerVersion;
+        $cmsMajor = BranchLogic::getCmsMajor($this->repoData, $this->branch, $this->getComposerJsonContent());
+        if ($cmsMajor >= 5 && !$isCoreModule && $isPreferLoweset && $installerVersion) {
+            // --prefer-lowest jobs should use the lowest installer version for non-core modules
+            // gha-ci will increment the installer version higher if composer is unable to install
+            // and try installing again
+            //
+            // Was going to use something like 5.2.x-dev, install 5.0.x-dev instead
+            $installerVersion = preg_replace('#^([0-9])\.[0-9]\.x-dev$#', '$1.0.x-dev', $installerVersion);
+            // Was going to use something like 5.x-dev, install 5.0.x-dev instaed
+            $installerVersion = preg_replace('#^([0-9])\.x-dev$#', '$1.0.x-dev', $installerVersion);
+        }
         $default = [
             # ensure there's a default value for all possible return keys
             # this allows us to use `if [[ "${{ matrix.key }}" == "true" ]]; then` in gha-ci/ci.yml
-            'installer_version' => $this->installerVersion,
+            'installer_version' => $installerVersion,
             'php' => $this->getPhpVersion($phpIndex),
             'parent_branch' => $this->parentBranch,
             'db' => DB_MYSQL_57,
