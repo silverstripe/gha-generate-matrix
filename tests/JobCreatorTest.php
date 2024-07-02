@@ -5,6 +5,49 @@ use SilverStripe\SupportedModules\MetaData;
 
 class JobCreatorTest extends TestCase
 {
+    public function provideCreateJobPreferLowest(): array
+    {
+        return [
+            'installer-module cms 4' => [
+                'branch' => '4',
+                'ghrepo' => 'silverstripe/silverstripe-framework',
+                'expected' => '4.x-dev',
+            ],
+            'non-installer-module cms 4' => [
+                'branch' => '4',
+                'ghrepo' => 'dnadesign/silverstripe-elemental',
+                'expected' => '4.x-dev',
+            ],
+            'installer-module cms 5' => [
+                'branch' => '5',
+                'ghrepo' => 'silverstripe/silverstripe-framework',
+                'expected' => '5.x-dev',
+            ],
+            'non-installer-module cms 5' => [
+                'branch' => '5',
+                'ghrepo' => 'dnadesign/silverstripe-elemental',
+                'expected' => '5.0.x-dev',
+            ],
+        ];
+    }
+
+    /**
+     * @dataProvider provideCreateJobPreferLowest
+     */
+    public function testCreateJobPreferLowest(string $branch, string $ghrepo, string $expected): void
+    {
+        $installerVersionProperty = new ReflectionProperty(JobCreator::class, 'installerVersion');
+        $installerVersionProperty->setAccessible(true);
+        $creator = new JobCreator();
+        $installerVersionProperty->setValue($creator, "$branch.x-dev");
+        $creator->githubRepository = $ghrepo;
+        $creator->repoName = explode('/', $ghrepo)[1];
+        $creator->branch = $branch;
+        $creator->parseRepositoryMetadata();
+        $actual = $creator->createJob(0, ['composer_args' => '--prefer-lowest'])['installer_version'];
+        $this->assertSame($expected, $actual);
+    }
+
     /**
      * @dataProvider provideCreateJob
      */
@@ -962,7 +1005,7 @@ class JobCreatorTest extends TestCase
             $creator = new JobCreator();
             $creator->composerJsonPath = '__composer.json';
             $json = json_decode($creator->createJson($yml));
-            $this->assertSame($expected, $json->include[0]->installer_version);
+            $this->assertSame($expected, $json->include[1]->installer_version);
         } finally {
             unlink('__composer.json');
             unlink('__installer_branches.json');

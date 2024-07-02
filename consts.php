@@ -23,6 +23,37 @@ const FORCE_INSTALLER_REPOS = [
     'recipe-blog',
 ];
 
+// list of modules that are required in either:
+// - silverstripe/installer
+// - silverstripe/recipe-cms
+// - silverstripe/recipe-core
+const INSTALLER_MODULES = [
+    // installer
+    'recipe-plugin',
+    'vendor-plugin',
+    'recipe-cms',
+    'silverstripe-simple',
+    'silverstripe-login-forms',
+    // recipe-cms
+    'recipe-core',
+    'silverstripe-admin',
+    'silverstripe-asset-admin',
+    'silverstripe-campaign-admin',
+    'silverstripe-versioned-admin',
+    'silverstripe-cms',
+    'silverstripe-errorpage',
+    'silverstripe-reports',
+    'silverstripe-siteconfig',
+    'silverstripe-versioned',
+    'silverstripe-graphql',
+    'silverstripe-session-manager',
+    // recipe-core
+    'silverstripe-assets',
+    'silverstripe-config',
+    'silverstripe-framework',
+    'silverstripe-mimevalidator',
+];
+
 // use hardcoded.php to bulk update update this after creating a .cow.pat.json
 // for multiple versions, use an array e.g. silverstripe-mymodule => ['2.3', '2.4']
 const INSTALLER_TO_REPO_MINOR_VERSIONS = [
