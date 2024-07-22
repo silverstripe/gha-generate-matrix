@@ -45,6 +45,7 @@ class JobCreatorTest extends TestCase
                 'endtoend' => false,
                 'endtoend_suite' => 'root',
                 'endtoend_config' => '',
+                'endtoend_tags' => '',
                 'js' => false,
                 'doclinting' => false,
                 'needs_full_setup' => false,
@@ -205,16 +206,51 @@ class JobCreatorTest extends TestCase
     /**
      * @dataProvider provideCreateJson
      */
-    public function testCreateJson(string $yml, array $expected)
-    {
+    public function testCreateJson(
+        string $yml,
+        bool $behatFile,
+        bool $featureFiles,
+        bool $featureFileMissingTag,
+        array $expected
+    ) {
         if (!function_exists('yaml_parse')) {
             $this->markTestSkipped('yaml extension is not installed');
         }
-        $creator = new JobCreator();
-        $json = json_decode($creator->createJson($yml));
-        for ($i = 0; $i < count($expected); $i++) {
-            foreach ($expected[$i] as $key => $expectedVal) {
-                $this->assertSame($expectedVal, $json->include[$i]->$key);
+        try {
+            if ($behatFile) {
+                file_put_contents('behat.yml', '');
+            }
+            if ($featureFiles && !file_exists('_test_features')) {
+                mkdir('_test_features');
+                file_put_contents('_test_features/feature1.feature', '@job1');
+                file_put_contents('_test_features/feature2.feature', '@job2');
+                if ($featureFileMissingTag) {
+                    file_put_contents('_test_features/feature2.feature', '@missing');
+                }
+            }
+            if ($featureFileMissingTag) {
+                $this->expectException(RuntimeException::class);
+                $this->expectExceptionMessage('At least one .feature files missing a @job[0-9]+ tag');
+            }
+            $creator = new JobCreator();
+            $json = json_decode($creator->createJson($yml));
+            $this->assertSame(count($expected), count($json->include));
+            for ($i = 0; $i < count($expected); $i++) {
+                foreach ($expected[$i] as $key => $expectedVal) {
+                    $this->assertSame($expectedVal, $json->include[$i]->$key, "\$i is $i, \$key is $key");
+                }
+            }
+        } finally {
+            if (file_exists('behat.yml')) {
+                unlink('behat.yml');
+            }
+            if (file_exists('_test_features')) {
+                foreach (scandir('_test_features') as $file) {
+                    if ($file !== '.' && $file !== '..') {
+                        unlink('_test_features/' . $file);
+                    }
+                }
+                rmdir('_test_features');
             }
         }
     }
@@ -222,6 +258,293 @@ class JobCreatorTest extends TestCase
     public function provideCreateJson(): array
     {
         return [
+            // behat without @job1/@job2 test
+            [
+                implode("\n", [
+                    $this->getGenericYml(),
+                    <<<EOT
+                    github_repository: 'myaccount/silverstripe-framework'
+                    github_my_ref: '5'
+                    parent_branch: ''
+                    EOT
+                ]),
+                true,
+                false,
+                false,
+                [
+                    [
+                        'installer_version' => '5.x-dev',
+                        'php' => '8.1',
+                        'db' => DB_MYSQL_57,
+                        'composer_require_extra' => '',
+                        'composer_args' => '--prefer-lowest',
+                        'name_suffix' => '',
+                        'phpunit' => 'true',
+                        'phpunit_suite' => 'all',
+                        'phplinting' => 'false',
+                        'phpcoverage' => 'false',
+                        'endtoend' => 'false',
+                        'endtoend_suite' => 'root',
+                        'endtoend_config' => '',
+                        'endtoend_tags' => '',
+                        'js' => 'false',
+                        'doclinting' => 'false',
+                        'needs_full_setup' => 'true',
+                        'name' => '8.1 prf-low mysql57 phpunit all',
+                    ],
+                    [
+                        'installer_version' => '5.x-dev',
+                        'php' => '8.2',
+                        'db' => DB_MARIADB,
+                        'composer_require_extra' => '',
+                        'composer_args' => '',
+                        'name_suffix' => '',
+                        'phpunit' => 'true',
+                        'phpunit_suite' => 'all',
+                        'phplinting' => 'false',
+                        'phpcoverage' => 'false',
+                        'endtoend' => 'false',
+                        'endtoend_suite' => 'root',
+                        'endtoend_config' => '',
+                        'endtoend_tags' => '',
+                        'js' => 'false',
+                        'doclinting' => 'false',
+                        'needs_full_setup' => 'true',
+                        'name' => '8.2 mariadb phpunit all',
+                    ],
+                    [
+                        'installer_version' => '5.x-dev',
+                        'php' => '8.3',
+                        'db' => DB_MYSQL_80,
+                        'composer_require_extra' => '',
+                        'composer_args' => '',
+                        'name_suffix' => '',
+                        'phpunit' => 'true',
+                        'phpunit_suite' => 'all',
+                        'phplinting' => 'false',
+                        'phpcoverage' => 'false',
+                        'endtoend' => 'false',
+                        'endtoend_suite' => 'root',
+                        'endtoend_config' => '',
+                        'endtoend_tags' => '',
+                        'js' => 'false',
+                        'doclinting' => 'false',
+                        'needs_full_setup' => 'true',
+                        'name' => '8.3 mysql80 phpunit all',
+                    ],
+                    [
+                        'installer_version' => '5.x-dev',
+                        'php' => '8.1',
+                        'db' => DB_MYSQL_57,
+                        'composer_require_extra' => '',
+                        'composer_args' => '',
+                        'name_suffix' => '',
+                        'phpunit' => 'false',
+                        'phpunit_suite' => 'all',
+                        'phplinting' => 'false',
+                        'phpcoverage' => 'false',
+                        'endtoend' => 'true',
+                        'endtoend_suite' => 'root',
+                        'endtoend_config' => '',
+                        'endtoend_tags' => '',
+                        'js' => 'false',
+                        'doclinting' => 'false',
+                        'needs_full_setup' => 'true',
+                        'name' => '8.1 mysql57 endtoend root',
+                    ],
+                    [
+                        'installer_version' => '5.x-dev',
+                        'php' => '8.3',
+                        'db' => DB_MYSQL_80,
+                        'composer_require_extra' => '',
+                        'composer_args' => '',
+                        'name_suffix' => '',
+                        'phpunit' => 'false',
+                        'phpunit_suite' => 'all',
+                        'phplinting' => 'false',
+                        'phpcoverage' => 'false',
+                        'endtoend' => 'true',
+                        'endtoend_suite' => 'root',
+                        'endtoend_config' => '',
+                        'endtoend_tags' => '',
+                        'js' => 'false',
+                        'doclinting' => 'false',
+                        'needs_full_setup' => 'true',
+                        'name' => '8.3 mysql80 endtoend root',
+                    ],
+                ]
+            ],
+            // behat with @job1/@job2 test
+            [
+                implode("\n", [
+                    $this->getGenericYml(),
+                    <<<EOT
+                    github_repository: 'myaccount/silverstripe-framework'
+                    github_my_ref: '5'
+                    parent_branch: ''
+                    EOT
+                ]),
+                true,
+                true,
+                false,
+                [
+                    [
+                        'installer_version' => '5.x-dev',
+                        'php' => '8.1',
+                        'db' => DB_MYSQL_57,
+                        'composer_require_extra' => '',
+                        'composer_args' => '--prefer-lowest',
+                        'name_suffix' => '',
+                        'phpunit' => 'true',
+                        'phpunit_suite' => 'all',
+                        'phplinting' => 'false',
+                        'phpcoverage' => 'false',
+                        'endtoend' => 'false',
+                        'endtoend_suite' => 'root',
+                        'endtoend_config' => '',
+                        'endtoend_tags' => '',
+                        'js' => 'false',
+                        'doclinting' => 'false',
+                        'needs_full_setup' => 'true',
+                        'name' => '8.1 prf-low mysql57 phpunit all',
+                    ],
+                    [
+                        'installer_version' => '5.x-dev',
+                        'php' => '8.2',
+                        'db' => DB_MARIADB,
+                        'composer_require_extra' => '',
+                        'composer_args' => '',
+                        'name_suffix' => '',
+                        'phpunit' => 'true',
+                        'phpunit_suite' => 'all',
+                        'phplinting' => 'false',
+                        'phpcoverage' => 'false',
+                        'endtoend' => 'false',
+                        'endtoend_suite' => 'root',
+                        'endtoend_config' => '',
+                        'endtoend_tags' => '',
+                        'js' => 'false',
+                        'doclinting' => 'false',
+                        'needs_full_setup' => 'true',
+                        'name' => '8.2 mariadb phpunit all',
+                    ],
+                    [
+                        'installer_version' => '5.x-dev',
+                        'php' => '8.3',
+                        'db' => DB_MYSQL_80,
+                        'composer_require_extra' => '',
+                        'composer_args' => '',
+                        'name_suffix' => '',
+                        'phpunit' => 'true',
+                        'phpunit_suite' => 'all',
+                        'phplinting' => 'false',
+                        'phpcoverage' => 'false',
+                        'endtoend' => 'false',
+                        'endtoend_suite' => 'root',
+                        'endtoend_config' => '',
+                        'endtoend_tags' => '',
+                        'js' => 'false',
+                        'doclinting' => 'false',
+                        'needs_full_setup' => 'true',
+                        'name' => '8.3 mysql80 phpunit all',
+                    ],
+                    [
+                        'installer_version' => '5.x-dev',
+                        'php' => '8.1',
+                        'db' => DB_MYSQL_57,
+                        'composer_require_extra' => '',
+                        'composer_args' => '',
+                        'name_suffix' => '',
+                        'phpunit' => 'false',
+                        'phpunit_suite' => 'all',
+                        'phplinting' => 'false',
+                        'phpcoverage' => 'false',
+                        'endtoend' => 'true',
+                        'endtoend_suite' => 'root',
+                        'endtoend_config' => '',
+                        'endtoend_tags' => 'job1',
+                        'js' => 'false',
+                        'doclinting' => 'false',
+                        'needs_full_setup' => 'true',
+                        'name' => '8.1 mysql57 endtoend root job1',
+                    ],
+                    [
+                        'installer_version' => '5.x-dev',
+                        'php' => '8.3',
+                        'db' => DB_MYSQL_80,
+                        'composer_require_extra' => '',
+                        'composer_args' => '',
+                        'name_suffix' => '',
+                        'phpunit' => 'false',
+                        'phpunit_suite' => 'all',
+                        'phplinting' => 'false',
+                        'phpcoverage' => 'false',
+                        'endtoend' => 'true',
+                        'endtoend_suite' => 'root',
+                        'endtoend_config' => '',
+                        'endtoend_tags' => 'job1',
+                        'js' => 'false',
+                        'doclinting' => 'false',
+                        'needs_full_setup' => 'true',
+                        'name' => '8.3 mysql80 endtoend root job1',
+                    ],
+                    [
+                        'installer_version' => '5.x-dev',
+                        'php' => '8.1',
+                        'db' => DB_MYSQL_57,
+                        'composer_require_extra' => '',
+                        'composer_args' => '',
+                        'name_suffix' => '',
+                        'phpunit' => 'false',
+                        'phpunit_suite' => 'all',
+                        'phplinting' => 'false',
+                        'phpcoverage' => 'false',
+                        'endtoend' => 'true',
+                        'endtoend_suite' => 'root',
+                        'endtoend_config' => '',
+                        'endtoend_tags' => 'job2',
+                        'js' => 'false',
+                        'doclinting' => 'false',
+                        'needs_full_setup' => 'true',
+                        'name' => '8.1 mysql57 endtoend root job2',
+                    ],
+                    [
+                        'installer_version' => '5.x-dev',
+                        'php' => '8.3',
+                        'db' => DB_MYSQL_80,
+                        'composer_require_extra' => '',
+                        'composer_args' => '',
+                        'name_suffix' => '',
+                        'phpunit' => 'false',
+                        'phpunit_suite' => 'all',
+                        'phplinting' => 'false',
+                        'phpcoverage' => 'false',
+                        'endtoend' => 'true',
+                        'endtoend_suite' => 'root',
+                        'endtoend_config' => '',
+                        'endtoend_tags' => 'job2',
+                        'js' => 'false',
+                        'doclinting' => 'false',
+                        'needs_full_setup' => 'true',
+                        'name' => '8.3 mysql80 endtoend root job2',
+                    ],
+                ]
+            ],
+            // behat with @job1/@job2 test with missing @job tag
+            [
+                implode("\n", [
+                    $this->getGenericYml(),
+                    <<<EOT
+                    github_repository: 'myaccount/silverstripe-framework'
+                    github_my_ref: '5'
+                    parent_branch: ''
+                    EOT
+                ]),
+                true,
+                true,
+                true,
+                []
+            ],
             // general test for v4
             [
                 implode("\n", [
@@ -232,6 +555,9 @@ class JobCreatorTest extends TestCase
                     parent_branch: ''
                     EOT
                 ]),
+                false,
+                false,
+                false,
                 [
                     [
                         'installer_version' => '4.11.x-dev',
@@ -248,6 +574,7 @@ class JobCreatorTest extends TestCase
                         'endtoend' => 'false',
                         'endtoend_suite' => 'root',
                         'endtoend_config' => '',
+                        'endtoend_tags' => '',
                         'js' => 'false',
                         'doclinting' => 'false',
                         'needs_full_setup' => 'true',
@@ -268,6 +595,7 @@ class JobCreatorTest extends TestCase
                         'endtoend' => 'false',
                         'endtoend_suite' => 'root',
                         'endtoend_config' => '',
+                        'endtoend_tags' => '',
                         'js' => 'false',
                         'doclinting' => 'false',
                         'needs_full_setup' => 'true',
@@ -288,6 +616,7 @@ class JobCreatorTest extends TestCase
                         'endtoend' => 'false',
                         'endtoend_suite' => 'root',
                         'endtoend_config' => '',
+                        'endtoend_tags' => '',
                         'js' => 'false',
                         'doclinting' => 'false',
                         'needs_full_setup' => 'true',
@@ -305,6 +634,9 @@ class JobCreatorTest extends TestCase
                     parent_branch: ''
                     EOT
                 ]),
+                false,
+                false,
+                false,
                 [
                     [
                         'installer_version' => '5.x-dev',
@@ -320,6 +652,7 @@ class JobCreatorTest extends TestCase
                         'endtoend' => 'false',
                         'endtoend_suite' => 'root',
                         'endtoend_config' => '',
+                        'endtoend_tags' => '',
                         'js' => 'false',
                         'doclinting' => 'false',
                         'needs_full_setup' => 'true',
@@ -339,6 +672,7 @@ class JobCreatorTest extends TestCase
                         'endtoend' => 'false',
                         'endtoend_suite' => 'root',
                         'endtoend_config' => '',
+                        'endtoend_tags' => '',
                         'js' => 'false',
                         'doclinting' => 'false',
                         'needs_full_setup' => 'true',
@@ -358,6 +692,7 @@ class JobCreatorTest extends TestCase
                         'endtoend' => 'false',
                         'endtoend_suite' => 'root',
                         'endtoend_config' => '',
+                        'endtoend_tags' => '',
                         'js' => 'false',
                         'doclinting' => 'false',
                         'needs_full_setup' => 'true',
@@ -375,6 +710,9 @@ class JobCreatorTest extends TestCase
                     parent_branch: ''
                     EOT
                 ]),
+                false,
+                false,
+                false,
                 [
                     [
                         'installer_version' => '6.x-dev',
@@ -390,6 +728,7 @@ class JobCreatorTest extends TestCase
                         'endtoend' => 'false',
                         'endtoend_suite' => 'root',
                         'endtoend_config' => '',
+                        'endtoend_tags' => '',
                         'js' => 'false',
                         'doclinting' => 'false',
                         'needs_full_setup' => 'true',
@@ -409,6 +748,7 @@ class JobCreatorTest extends TestCase
                         'endtoend' => 'false',
                         'endtoend_suite' => 'root',
                         'endtoend_config' => '',
+                        'endtoend_tags' => '',
                         'js' => 'false',
                         'doclinting' => 'false',
                         'needs_full_setup' => 'true',
@@ -428,6 +768,7 @@ class JobCreatorTest extends TestCase
                         'endtoend' => 'false',
                         'endtoend_suite' => 'root',
                         'endtoend_config' => '',
+                        'endtoend_tags' => '',
                         'js' => 'false',
                         'doclinting' => 'false',
                         'needs_full_setup' => 'true',
@@ -445,6 +786,9 @@ class JobCreatorTest extends TestCase
                     parent_branch: ''
                     EOT
                 ]),
+                false,
+                false,
+                false,
                 [
                     [
                         'installer_version' => '5.1.x-dev',
@@ -460,6 +804,7 @@ class JobCreatorTest extends TestCase
                         'endtoend' => 'false',
                         'endtoend_suite' => 'root',
                         'endtoend_config' => '',
+                        'endtoend_tags' => '',
                         'js' => 'false',
                         'doclinting' => 'false',
                         'needs_full_setup' => 'true',
@@ -479,6 +824,7 @@ class JobCreatorTest extends TestCase
                         'endtoend' => 'false',
                         'endtoend_suite' => 'root',
                         'endtoend_config' => '',
+                        'endtoend_tags' => '',
                         'js' => 'false',
                         'doclinting' => 'false',
                         'needs_full_setup' => 'true',
@@ -498,6 +844,7 @@ class JobCreatorTest extends TestCase
                         'endtoend' => 'false',
                         'endtoend_suite' => 'root',
                         'endtoend_config' => '',
+                        'endtoend_tags' => '',
                         'js' => 'false',
                         'doclinting' => 'false',
                         'needs_full_setup' => 'true',
@@ -515,6 +862,9 @@ class JobCreatorTest extends TestCase
                     parent_branch: ''
                     EOT
                 ]),
+                false,
+                false,
+                false,
                 [
                     [
                         'installer_version' => '5.2.x-dev',
@@ -530,6 +880,7 @@ class JobCreatorTest extends TestCase
                         'endtoend' => 'false',
                         'endtoend_suite' => 'root',
                         'endtoend_config' => '',
+                        'endtoend_tags' => '',
                         'js' => 'false',
                         'doclinting' => 'false',
                         'needs_full_setup' => 'true',
@@ -549,6 +900,7 @@ class JobCreatorTest extends TestCase
                         'endtoend' => 'false',
                         'endtoend_suite' => 'root',
                         'endtoend_config' => '',
+                        'endtoend_tags' => '',
                         'js' => 'false',
                         'doclinting' => 'false',
                         'needs_full_setup' => 'true',
@@ -568,6 +920,7 @@ class JobCreatorTest extends TestCase
                         'endtoend' => 'false',
                         'endtoend_suite' => 'root',
                         'endtoend_config' => '',
+                        'endtoend_tags' => '',
                         'js' => 'false',
                         'doclinting' => 'false',
                         'needs_full_setup' => 'true',

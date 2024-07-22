@@ -150,6 +150,7 @@ class JobCreator
             'endtoend' => false,
             'endtoend_suite' => 'root',
             'endtoend_config' => '',
+            'endtoend_tags' => '',
             'js' => false,
             'doclinting' => false,
             'install_in_memory_cache_exts' => false,
@@ -386,6 +387,28 @@ class JobCreator
         return $run['phpcoverage'];
     }
 
+    /**
+     * Recursively finds all nested files matching an extension in a directory
+     */
+    private function getFilesMatchingExtension($dir, $extension, &$filepaths = []): array
+    {
+        $files = scandir($dir);
+        foreach ($files as $file) {
+            if (in_array($file, ['.', '..'])) {
+                continue;
+            }
+            if (is_dir("$dir/$file")) {
+                $this->getFilesMatchingExtension("$dir/$file", $extension, $filepaths);
+            } else {
+                $ext = pathinfo($file, PATHINFO_EXTENSION);
+                if ($ext === $extension) {
+                    $filepaths[] = "$dir/$file";
+                }
+            }
+        }
+        return $filepaths;
+    }
+
     private function buildDynamicMatrix(
         array $matrix,
         array $run,
@@ -436,27 +459,49 @@ class JobCreator
         }
         // endtoend / behat
         if ($run['endtoend'] && file_exists('behat.yml')) {
-            $graphql3 = !$simpleMatrix && $cmsMajor == '4';
-            $job = $this->createJob(0, [
-                'endtoend' => true,
-                'endtoend_suite' => 'root',
-                'composer_require_extra' => $graphql3 ? 'silverstripe/graphql:^3' : ''
-            ]);
-            // use minimum version of 7.4 for endtoend because was having apt dependency issues
-            // in CI when using php 7.3:
-            // The following packages have unmet dependencies:
-            // libpcre2-dev : Depends: libpcre2-8-0 (= 10.39-3+ubuntu20.04.1+deb.sury.org+2) but
-            // 10.40-1+ubuntu20.04.1+deb.sury.org+1 is to be installed
-            if ($job['php'] == '7.3') {
-                $job['php'] = '7.4';
+            $jobTags = [];
+            $filepaths = $this->getFilesMatchingExtension(getcwd(), 'feature');
+            foreach ($filepaths as $filepath) {
+                $contents = file_get_contents($filepath);
+                if (preg_match('#@(job[0-9]+)#', $contents, $matches)) {
+                    $jobTags[] = $matches[1];
+                }
             }
-            $matrix['include'][] = $job;
-            if (!$simpleMatrix && !$composerInstall) {
-                $matrix['include'][] = $this->createJob(3, [
-                    'db' => DB_MYSQL_80,
+            $jobTagsCount = count($jobTags);
+            $jobTags = array_unique($jobTags);
+            if ($jobTagsCount === 0) {
+                $jobTags = [''];
+            } else {
+                if ($jobTagsCount !== count($filepaths)) {
+                    throw new RuntimeException('At least one .feature files missing a @job[0-9]+ tag');
+                }
+            }
+            sort($jobTags);
+            foreach ($jobTags as $jobTag) {
+                $graphql3 = !$simpleMatrix && $cmsMajor == '4';
+                $job = $this->createJob(0, [
                     'endtoend' => true,
-                    'endtoend_suite' => 'root'
+                    'endtoend_suite' => 'root',
+                    'endtoend_tags' => $jobTag,
+                    'composer_require_extra' => $graphql3 ? 'silverstripe/graphql:^3' : '',
                 ]);
+                // use minimum version of 7.4 for endtoend because was having apt dependency issues
+                // in CI when using php 7.3:
+                // The following packages have unmet dependencies:
+                // libpcre2-dev : Depends: libpcre2-8-0 (= 10.39-3+ubuntu20.04.1+deb.sury.org+2) but
+                // 10.40-1+ubuntu20.04.1+deb.sury.org+1 is to be installed
+                if ($job['php'] == '7.3') {
+                    $job['php'] = '7.4';
+                }
+                $matrix['include'][] = $job;
+                if (!$simpleMatrix && !$composerInstall) {
+                    $matrix['include'][] = $this->createJob(3, [
+                        'db' => DB_MYSQL_80,
+                        'endtoend' => true,
+                        'endtoend_suite' => 'root',
+                        'endtoend_tags' => $jobTag,
+                    ]);
+                }
             }
         }
         // javascript tests
@@ -624,6 +669,9 @@ class JobCreator
             if ($job['endtoend'] == 'true') {
                 $name[] = 'endtoend';
                 $name[] = $job['endtoend_suite'] ?: 'root';
+                if ($job['endtoend_tags']) {
+                    $name[] = $job['endtoend_tags'];
+                }
             }
             if ($job['js'] == 'true') {
                 $name[] = 'js';
