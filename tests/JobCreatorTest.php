@@ -716,7 +716,7 @@ class JobCreatorTest extends TestCase
                 [
                     [
                         'installer_version' => '6.x-dev',
-                        'php' => '8.1',
+                        'php' => '8.3',
                         'db' => DB_MYSQL_57,
                         'composer_require_extra' => '',
                         'composer_args' => '--prefer-lowest',
@@ -732,11 +732,11 @@ class JobCreatorTest extends TestCase
                         'js' => 'false',
                         'doclinting' => 'false',
                         'needs_full_setup' => 'true',
-                        'name' => '8.1 prf-low mysql57 phpunit all',
+                        'name' => '8.3 prf-low mysql57 phpunit all',
                     ],
                     [
                         'installer_version' => '6.x-dev',
-                        'php' => '8.2',
+                        'php' => '8.3',
                         'db' => DB_MARIADB,
                         'composer_require_extra' => '',
                         'composer_args' => '',
@@ -752,27 +752,7 @@ class JobCreatorTest extends TestCase
                         'js' => 'false',
                         'doclinting' => 'false',
                         'needs_full_setup' => 'true',
-                        'name' => '8.2 mariadb phpunit all',
-                    ],
-                    [
-                        'installer_version' => '6.x-dev',
-                        'php' => '8.3',
-                        'db' => DB_MYSQL_80,
-                        'composer_require_extra' => '',
-                        'composer_args' => '',
-                        'name_suffix' => '',
-                        'phpunit' => 'true',
-                        'phpunit_suite' => 'all',
-                        'phplinting' => 'false',
-                        'phpcoverage' => 'false',
-                        'endtoend' => 'false',
-                        'endtoend_suite' => 'root',
-                        'endtoend_config' => '',
-                        'endtoend_tags' => '',
-                        'js' => 'false',
-                        'doclinting' => 'false',
-                        'needs_full_setup' => 'true',
-                        'name' => '8.3 mysql80 phpunit all',
+                        'name' => '8.3 mariadb phpunit all',
                     ],
                 ]
             ],
@@ -1431,7 +1411,7 @@ class JobCreatorTest extends TestCase
                 '6.x-dev',
                 'silverstripe-vendormodule',
                 [
-                    '8.1 mysql57 phpunit all'
+                    '8.3 mysql57 phpunit all'
                 ]
             ],
             'composerinstall_definedphpversion_framework5' => [
@@ -1480,9 +1460,8 @@ class JobCreatorTest extends TestCase
                 '6.x-dev',
                 'silverstripe-vendormodule',
                 [
-                    '8.1 prf-low mysql57 phpunit all',
-                    '8.2 mariadb phpunit all',
-                    '8.3 mysql80 phpunit all',
+                    '8.3 prf-low mysql57 phpunit all',
+                    '8.3 mariadb phpunit all',
                 ]
             ],
             'composerupgrade_definedphpversion_framework5' => [
@@ -1513,9 +1492,8 @@ class JobCreatorTest extends TestCase
                 '6.x-dev',
                 'silverstripe-theme',
                 [
-                    '8.1 prf-low mysql57 phpunit all',
-                    '8.2 mariadb phpunit all',
-                    '8.3 mysql80 phpunit all',
+                    '8.3 prf-low mysql57 phpunit all',
+                    '8.3 mariadb phpunit all',
                 ]
             ],
             'composerupgrade_nophpversion_framework51' => [
