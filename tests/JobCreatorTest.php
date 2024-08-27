@@ -912,6 +912,303 @@ class JobCreatorTest extends TestCase
     }
 
     /**
+     * silverstripe/config is a bit of a special case, so test for it explicitly
+     * @dataProvider provideCreateJsonForConfig
+     */
+    public function testCreateJsonForConfig(string $branch, string $phpConstraint, array $expected): void
+    {
+        if (!function_exists('yaml_parse')) {
+            $this->markTestSkipped('yaml extension is not installed');
+        }
+        $yml = <<<EOT
+        endtoend: false
+        js: false
+        phpcoverage: false
+        phpcoverage_force_off: false
+        phplinting: true
+        phpunit: true
+        doclinting: false
+        simple_matrix: false
+        composer_install: false
+        github_repository: 'silverstripe/silverstripe-config'
+        github_my_ref: '$branch'
+        EOT;
+        try {
+            $creator = new JobCreator();
+            $creator->composerJsonPath = '__composer.json';
+            $composer = <<<COMPOSER
+            {
+                "name": "silverstripe/framework",
+                "require": {
+                    "php": "$phpConstraint"
+                }
+            }
+            COMPOSER;
+            $expectedPhps = ['8.3', '8.3', '8.3', '8.3'];
+            file_put_contents('__composer.json', $composer);
+            $json = json_decode($creator->createJson($yml));
+            $this->assertSame(count($expected), count($json->include));
+            for ($i = 0; $i < count($expected); $i++) {
+                foreach ($expected[$i] as $key => $expectedVal) {
+                    $this->assertSame($expectedVal, $json->include[$i]->$key, "\$i is $i, \$key is $key");
+                }
+            }
+        } finally {
+            unlink('__composer.json');
+        }
+    }
+
+    public function provideCreateJsonForConfig(): array
+    {
+        return [
+            'cms 4' => [
+                'branch' => '1.6',
+                'phpConstraint' => '^7.4 || ^8.0',
+                'expected' => [
+                    [
+                        'installer_version' => '',
+                        'php' => '7.4',
+                        'db' => DB_MYSQL_57,
+                        'composer_require_extra' => '',
+                        'composer_args' => '--prefer-lowest',
+                        'name_suffix' => '',
+                        'phpunit' => 'true',
+                        'phpunit_suite' => 'all',
+                        'phplinting' => 'false',
+                        'phpcoverage' => 'false',
+                        'endtoend' => 'false',
+                        'endtoend_suite' => 'root',
+                        'endtoend_config' => '',
+                        'endtoend_tags' => '',
+                        'js' => 'false',
+                        'doclinting' => 'false',
+                        'needs_full_setup' => 'false',
+                        'name' => '7.4 prf-low mysql57 phpunit all',
+                    ],
+                    [
+                        'installer_version' => '',
+                        'php' => '8.0',
+                        'db' => DB_MYSQL_57_PDO,
+                        'composer_require_extra' => '',
+                        'composer_args' => '',
+                        'name_suffix' => '',
+                        'phpunit' => 'true',
+                        'phpunit_suite' => 'all',
+                        'phplinting' => 'false',
+                        'phpcoverage' => 'false',
+                        'endtoend' => 'false',
+                        'endtoend_suite' => 'root',
+                        'endtoend_config' => '',
+                        'endtoend_tags' => '',
+                        'js' => 'false',
+                        'doclinting' => 'false',
+                        'needs_full_setup' => 'false',
+                        'name' => '8.0 mysql57pdo phpunit all',
+                    ],
+                    [
+                        'installer_version' => '',
+                        'php' => '8.1',
+                        'db' => DB_MYSQL_80,
+                        'composer_require_extra' => '',
+                        'composer_args' => '',
+                        'name_suffix' => '',
+                        'phpunit' => 'true',
+                        'phpunit_suite' => 'all',
+                        'phplinting' => 'false',
+                        'phpcoverage' => 'false',
+                        'endtoend' => 'false',
+                        'endtoend_suite' => 'root',
+                        'endtoend_config' => '',
+                        'endtoend_tags' => '',
+                        'js' => 'false',
+                        'doclinting' => 'false',
+                        'needs_full_setup' => 'false',
+                        'name' => '8.1 mysql80 phpunit all',
+                    ],
+                ],
+            ],
+            'cms 5.1+' => [
+                'branch' => '2.1',
+                'phpConstraint' => '^8.1',
+                'expected' => [
+                    [
+                        'installer_version' => '',
+                        'php' => '8.1',
+                        'db' => DB_MYSQL_57,
+                        'composer_require_extra' => '',
+                        'composer_args' => '--prefer-lowest',
+                        'name_suffix' => '',
+                        'phpunit' => 'true',
+                        'phpunit_suite' => 'all',
+                        'phplinting' => 'false',
+                        'phpcoverage' => 'false',
+                        'endtoend' => 'false',
+                        'endtoend_suite' => 'root',
+                        'endtoend_config' => '',
+                        'endtoend_tags' => '',
+                        'js' => 'false',
+                        'doclinting' => 'false',
+                        'needs_full_setup' => 'false',
+                        'name' => '8.1 prf-low mysql57 phpunit all',
+                    ],
+                    [
+                        'installer_version' => '',
+                        'php' => '8.1',
+                        'db' => DB_MARIADB,
+                        'composer_require_extra' => '',
+                        'composer_args' => '',
+                        'name_suffix' => '',
+                        'phpunit' => 'true',
+                        'phpunit_suite' => 'all',
+                        'phplinting' => 'false',
+                        'phpcoverage' => 'false',
+                        'endtoend' => 'false',
+                        'endtoend_suite' => 'root',
+                        'endtoend_config' => '',
+                        'endtoend_tags' => '',
+                        'js' => 'false',
+                        'doclinting' => 'false',
+                        'needs_full_setup' => 'false',
+                        'name' => '8.1 mariadb phpunit all',
+                    ],
+                    [
+                        'installer_version' => '',
+                        'php' => '8.2',
+                        'db' => DB_MYSQL_80,
+                        'composer_require_extra' => '',
+                        'composer_args' => '',
+                        'name_suffix' => '',
+                        'phpunit' => 'true',
+                        'phpunit_suite' => 'all',
+                        'phplinting' => 'false',
+                        'phpcoverage' => 'false',
+                        'endtoend' => 'false',
+                        'endtoend_suite' => 'root',
+                        'endtoend_config' => '',
+                        'endtoend_tags' => '',
+                        'js' => 'false',
+                        'doclinting' => 'false',
+                        'needs_full_setup' => 'false',
+                        'name' => '8.2 mysql80 phpunit all',
+                    ],
+                ],
+            ],
+            'cms 5.x' => [
+                'branch' => '2',
+                'phpConstraint' => '^8.1',
+                'expected' => [
+                    [
+                        'installer_version' => '',
+                        'php' => '8.1',
+                        'db' => DB_MYSQL_57,
+                        'composer_require_extra' => '',
+                        'composer_args' => '--prefer-lowest',
+                        'name_suffix' => '',
+                        'phpunit' => 'true',
+                        'phpunit_suite' => 'all',
+                        'phplinting' => 'false',
+                        'phpcoverage' => 'false',
+                        'endtoend' => 'false',
+                        'endtoend_suite' => 'root',
+                        'endtoend_config' => '',
+                        'endtoend_tags' => '',
+                        'js' => 'false',
+                        'doclinting' => 'false',
+                        'needs_full_setup' => 'false',
+                        'name' => '8.1 prf-low mysql57 phpunit all',
+                    ],
+                    [
+                        'installer_version' => '',
+                        'php' => '8.2',
+                        'db' => DB_MARIADB,
+                        'composer_require_extra' => '',
+                        'composer_args' => '',
+                        'name_suffix' => '',
+                        'phpunit' => 'true',
+                        'phpunit_suite' => 'all',
+                        'phplinting' => 'false',
+                        'phpcoverage' => 'false',
+                        'endtoend' => 'false',
+                        'endtoend_suite' => 'root',
+                        'endtoend_config' => '',
+                        'endtoend_tags' => '',
+                        'js' => 'false',
+                        'doclinting' => 'false',
+                        'needs_full_setup' => 'false',
+                        'name' => '8.2 mariadb phpunit all',
+                    ],
+                    [
+                        'installer_version' => '',
+                        'php' => '8.3',
+                        'db' => DB_MYSQL_80,
+                        'composer_require_extra' => '',
+                        'composer_args' => '',
+                        'name_suffix' => '',
+                        'phpunit' => 'true',
+                        'phpunit_suite' => 'all',
+                        'phplinting' => 'false',
+                        'phpcoverage' => 'false',
+                        'endtoend' => 'false',
+                        'endtoend_suite' => 'root',
+                        'endtoend_config' => '',
+                        'endtoend_tags' => '',
+                        'js' => 'false',
+                        'doclinting' => 'false',
+                        'needs_full_setup' => 'false',
+                        'name' => '8.3 mysql80 phpunit all',
+                    ],
+                ],
+            ],
+            'cms 6.x' => [
+                'branch' => '3',
+                'phpConstraint' => '^8.3',
+                'expected' => [
+                    [
+                        'installer_version' => '',
+                        'php' => '8.3',
+                        'db' => DB_MYSQL_57,
+                        'composer_require_extra' => '',
+                        'composer_args' => '--prefer-lowest',
+                        'name_suffix' => '',
+                        'phpunit' => 'true',
+                        'phpunit_suite' => 'all',
+                        'phplinting' => 'false',
+                        'phpcoverage' => 'false',
+                        'endtoend' => 'false',
+                        'endtoend_suite' => 'root',
+                        'endtoend_config' => '',
+                        'endtoend_tags' => '',
+                        'js' => 'false',
+                        'doclinting' => 'false',
+                        'needs_full_setup' => 'false',
+                        'name' => '8.3 prf-low mysql57 phpunit all',
+                    ],
+                    [
+                        'installer_version' => '',
+                        'php' => '8.3',
+                        'db' => DB_MARIADB,
+                        'composer_require_extra' => '',
+                        'composer_args' => '',
+                        'name_suffix' => '',
+                        'phpunit' => 'true',
+                        'phpunit_suite' => 'all',
+                        'phplinting' => 'false',
+                        'phpcoverage' => 'false',
+                        'endtoend' => 'false',
+                        'endtoend_suite' => 'root',
+                        'endtoend_config' => '',
+                        'endtoend_tags' => '',
+                        'js' => 'false',
+                        'doclinting' => 'false',
+                        'needs_full_setup' => 'false',
+                        'name' => '8.3 mariadb phpunit all',
+                    ],
+                ],
+            ],
+        ];
+    }
+
+    /**
      * @dataProvider provideParentBranch
      */
     public function testParentBranch(string $yml, string $expected)

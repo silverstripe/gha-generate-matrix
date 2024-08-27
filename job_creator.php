@@ -242,7 +242,7 @@ class JobCreator
     private function getInstallerBranch(): string
     {
         $version = str_replace('.x-dev', '', $this->installerVersion);
-        if (!in_array($this->repoName, FORCE_INSTALLER_REPOS) && isset($this->repoData['type']) && $this->repoData['type'] === 'recipe') {
+        if (in_array($this->repoName, NO_INSTALLER_REPOS) || (!in_array($this->repoName, FORCE_INSTALLER_REPOS) && isset($this->repoData['type']) && $this->repoData['type'] === 'recipe')) {
             $cmsMajor = BranchLogic::getCmsMajor($this->repoData, $this->branch, $this->getComposerJsonContent()) ?: MetaData::LOWEST_SUPPORTED_CMS_MAJOR;
             if (preg_match('#^[1-9]\.([0-9]+)$#', $this->branch, $matches)) {
                 $version = sprintf('%d.%d', $cmsMajor, $matches[1]);
@@ -346,7 +346,8 @@ class JobCreator
      */
     private function getListOfPhpVersionsByBranchName(): array
     {
-        return MetaData::PHP_VERSIONS_FOR_CMS_RELEASES[$this->getInstallerBranch()] ?? MetaData::PHP_VERSIONS_FOR_CMS_RELEASES['4'];
+        $branch = $this->getInstallerBranch();
+        return MetaData::PHP_VERSIONS_FOR_CMS_RELEASES[$branch] ?? MetaData::PHP_VERSIONS_FOR_CMS_RELEASES['4'];
     }
 
     /**
