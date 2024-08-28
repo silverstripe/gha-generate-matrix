@@ -132,13 +132,15 @@ class JobCreator
 
     public function createJob(int $phpIndex, array $opts): array
     {
+        $cmsMajor = BranchLogic::getCmsMajor($this->repoData, $this->branch, $this->getComposerJsonContent()) ?: MetaData::LOWEST_SUPPORTED_CMS_MAJOR;
+        $db = in_array($cmsMajor, ['4', '5']) ? DB_MYSQL_57 : DB_MYSQL_80;
         $default = [
             # ensure there's a default value for all possible return keys
             # this allows us to use `if [[ "${{ matrix.key }}" == "true" ]]; then` in gha-ci/ci.yml
             'installer_version' => $this->installerVersion,
             'php' => $this->getPhpVersion($phpIndex),
             'parent_branch' => $this->parentBranch,
-            'db' => DB_MYSQL_57,
+            'db' => $db,
             'composer_require_extra' => '',
             'composer_args' => '',
             'composer_install' => false,
@@ -303,13 +305,13 @@ class JobCreator
                 'phpunit_suite' => $suite,
             ]);
         } else {
+            $cmsMajor = BranchLogic::getCmsMajor($this->repoData, $this->branch, $this->getComposerJsonContent()) ?: MetaData::LOWEST_SUPPORTED_CMS_MAJOR;
             $matrix['include'][] = $this->createJob(0, [
                 'composer_args' => '--prefer-lowest',
-                'db' => DB_MYSQL_57,
+                'db' => in_array($cmsMajor, ['4', '5']) ? DB_MYSQL_57 : DB_MARIADB,
                 'phpunit' => true,
                 'phpunit_suite' => $suite,
             ]);
-            $cmsMajor = BranchLogic::getCmsMajor($this->repoData, $this->branch, $this->getComposerJsonContent()) ?: MetaData::LOWEST_SUPPORTED_CMS_MAJOR;
             if ($cmsMajor === '4') {
                 if (!$this->doRunPhpCoverage($run)) {
                     // this same mysql pdo test is also created for the phpcoverage job, so only add it here if
@@ -366,7 +368,12 @@ class JobCreator
     {
         $map = [];
         $phpVersions = $this->getListOfPhpVersionsByBranchName();
-        $dbs = [DB_MARIADB, DB_MYSQL_80];
+        $cmsMajor = BranchLogic::getCmsMajor($this->repoData, $this->branch, $this->getComposerJsonContent()) ?: MetaData::LOWEST_SUPPORTED_CMS_MAJOR;
+        if ($cmsMajor === '5') {
+            $dbs = [DB_MARIADB, DB_MYSQL_80];
+        } else {
+            $dbs = [DB_MYSQL_80, DB_MARIADB];
+        }
         foreach ($phpVersions as $key => $phpVersion) {
             if (count($phpVersions) < 3) {
                 $map[$phpVersion] = $dbs[$key];
