@@ -102,12 +102,8 @@ class JobCreator
                 return $cmsMajor . '.x-dev';
             }
             sort($minorPortions);
-            $minorPortion = $minorPortions[count($minorPortions) - 1];
-            $installerVersion = $cmsMajor . '.' . $minorPortion;
 
-            // It's normal for new major versions branches to exist a year or more before the first release
-            // The corresponding minor version branch will not exist at this time
-            // Check that the minor version of the installer branches exists, if not, fallback to using the major
+            // Get data about which branches exist so we can avoid testing against non-existent branches
             if ($installerBranchesJson) {
                 // this if for unit testing
                 $json = json_decode($installerBranchesJson);
@@ -119,14 +115,23 @@ class JobCreator
                 $json = json_decode(file_get_contents('__installer_branches.json'));
             }
             $branches = array_column($json, 'name');
-            // using array_filter() instead of in_array() to ensure we get a strict equality check
-            // e.g. '6' and '6.0' are not equal
-            $branchExists = count(array_filter($branches, fn($branch) => $branch === $installerVersion));
-            if (!$branchExists) {
-                return $cmsMajor . '.x-dev';
+
+            // It's normal for new major versions branches to exist a year or more before the first release
+            // and also our unit tests don't get magically updated when we release new minor releases.
+            // The corresponding minor version branch may not exist.
+            // Check that the minor version of the installer branches exists, if not, fallback to using the major
+            foreach (array_reverse($minorPortions) as $minorPortion) {
+                $installerVersion = $cmsMajor . '.' . $minorPortion;
+                // using array_filter() instead of in_array() to ensure we get a strict equality check
+                // e.g. '6' and '6.0' are not equal
+                $branchExists = count(array_filter($branches, fn($branch) => $branch === $installerVersion));
+                if ($branchExists) {
+                    return $installerVersion . '.x-dev';
+                }
             }
 
-            return $installerVersion . '.x-dev';
+            // If there were no branches for any minor version, fall back to the next-minor branch
+            return $cmsMajor . '.x-dev';
         }
     }
 
