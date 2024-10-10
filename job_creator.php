@@ -186,7 +186,7 @@ class JobCreator
             }
             $this->composerPhpConstraint = $json->require->php;
         }
-        $constraints = explode('||', $this->composerPhpConstraint);
+        $constraints = preg_split('#(\|\||\|)#', $this->composerPhpConstraint);
         $constraints = array_map(function($php) {
             return preg_replace('#([0-9\.\*]+) *- *([0-9\.\*]+)#', '$1-$2', trim($php));
         }, $constraints);
