@@ -1949,4 +1949,46 @@ class JobCreatorTest extends TestCase
             ],
         ];
     }
+
+    public function testDuplicateJobsRemoved(): void
+    {
+        if (!function_exists('yaml_parse')) {
+            $this->markTestSkipped('yaml extension is not installed');
+        }
+        $yml = implode("\n", [
+            $this->getGenericYml(),
+            <<<EOT
+            github_repository: 'myaccount/silverstripe-framework'
+            github_my_ref: '5'
+            parent_branch: ''
+            extra_jobs:
+              - php: 8.2
+                phpunit: true
+                phpunit_suite: fish
+              - php: 8.3
+                phpunit: true
+                phpunit_suite: fish
+              - php: 8.3
+                phpunit: true
+                phpunit_suite: fish
+              - php: 8.3
+                endtoend: true
+            EOT
+        ]);
+        $creator = new JobCreator();
+        $json = json_decode($creator->createJson($yml));
+        $actual = [];
+        foreach ($json->include as $job) {
+            $actual[] = $job->name;
+        }
+        $expected = [
+            '8.1 prf-low mysql57 phpunit all',
+            '8.2 mariadb phpunit all',
+            '8.3 mysql80 phpunit all',
+            '8.2 mysql57 phpunit fish',
+            '8.3 mysql57 phpunit fish',
+            '8.3 mysql57 endtoend root',
+        ];
+        $this->assertSame($expected, $actual);
+    }
 }
