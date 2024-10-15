@@ -706,6 +706,10 @@ class JobCreator
             $matrix['include'][$i]['name'] = implode(' ', $name);
         }
 
+        // ensure there are no duplicate jobs
+        $uniqueSerializedJobs = array_unique(array_map('serialize', $matrix['include']));
+        $matrix['include'] = array_values(array_map('unserialize', $uniqueSerializedJobs));
+
         // output json, keep it on a single line so do not use pretty print
         $json = json_encode($matrix, JSON_UNESCAPED_SLASHES);
         // Remove indents
