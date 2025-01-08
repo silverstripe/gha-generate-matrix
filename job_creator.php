@@ -52,7 +52,9 @@ class JobCreator
             }
         }
         // hardcoded installer version for repo version
-        foreach (array_keys(INSTALLER_TO_REPO_MINOR_VERSIONS) as $installerVersion) {
+        $keys = array_keys(INSTALLER_TO_REPO_MINOR_VERSIONS);
+        $keys = array_reverse($keys);
+        foreach ($keys as $installerVersion) {
             foreach (INSTALLER_TO_REPO_MINOR_VERSIONS[$installerVersion] as $_repo => $_repoVersions) {
                 $repoVersions = is_array($_repoVersions) ? $_repoVersions : [$_repoVersions];
                 foreach ($repoVersions as $repoVersion) {
@@ -375,7 +377,7 @@ class JobCreator
         $json = $this->getComposerJsonContent();
         if ($json) {
             $php = $json->require->php ?? null;
-            $php = str_replace('^', '', $php);
+            $php = str_replace('^', '', $php ?? '');
             $cmsMajors = array_keys(MetaData::PHP_VERSIONS_FOR_CMS_RELEASES);
             $cmsMajors = array_filter($cmsMajors, fn($v) => !str_contains($v, '.'));
             $cmsMajors = array_reverse($cmsMajors);
