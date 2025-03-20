@@ -133,6 +133,8 @@ class JobCreatorTest extends TestCase
 
     public function provideGetInstallerVersion(): array
     {
+        $versionsInConst = array_keys(INSTALLER_TO_REPO_MINOR_VERSIONS);
+        $latestVersionInConst = end($versionsInConst);
         $nextMinorCms4 = '4.x-dev';
         $currentMinorCms4 = $this->getCurrentMinorInstallerVersion('4') . '.x-dev';
         return [
@@ -174,8 +176,8 @@ class JobCreatorTest extends TestCase
             'tagfield4' => ['myaccount/silverstripe-tagfield', 'pulls/2/mybugfix', $nextMinorCms4],
             'tagfield5' => ['myaccount/silverstripe-tagfield', 'pulls/2.9/mybugfix', $currentMinorCms4],
             'tagfield6' => ['myaccount/silverstripe-tagfield', 'pulls/burger/myfeature', $currentMinorCms4],
-            // non-lockstepped repo, fallback to major version of installer (is missing 6.0 installer branch)
-            'tagfield7' => ['myaccount/silverstripe-tagfield', '4.0', '6.x-dev', [['name' => '6']], ['silverstripe/framework' => '^6']],
+            // non-lockstepped repo, fallback to major version of installer as no branch `99` or `99.x` exists for installer.
+            'tagfield8' => ['myaccount/silverstripe-tagfield', '4.0', $latestVersionInConst . '.x-dev', [['name' => '99']], ['silverstripe/framework' => '^99']],
             // hardcoded repo version
             'session-manager1' => ['myaccount/silverstripe-session-manager', '1', $nextMinorCms4],
             'session-manager2' => ['myaccount/silverstripe-session-manager', '1.2', '4.10.x-dev'],
