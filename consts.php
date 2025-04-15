@@ -357,7 +357,6 @@ const INSTALLER_TO_REPO_MINOR_VERSIONS = [
         'silverstripe-elemental' => '5.1',
         'silverstripe-elemental-bannerblock' => '3.1',
         'silverstripe-elemental-fileblock' => '3.1',
-        'silverstripe-elemental-userforms' => '4.1',
         'silverstripe-environmentcheck' => '3.0',
         'silverstripe-externallinks' => '3.1',
         'silverstripe-fluent' => '7.0',
