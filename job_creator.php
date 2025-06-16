@@ -139,7 +139,7 @@ class JobCreator
     public function createJob(int $phpIndex, array $opts): array
     {
         $cmsMajor = BranchLogic::getCmsMajor($this->repoData, $this->branch, $this->getComposerJsonContent()) ?: MetaData::LOWEST_SUPPORTED_CMS_MAJOR;
-        $db = in_array($cmsMajor, ['4', '5']) ? DB_MYSQL_57 : DB_MYSQL_80;
+        $db = $cmsMajor == 5 ? DB_MYSQL_57 : DB_MYSQL_80;
         $default = [
             # ensure there's a default value for all possible return keys
             # this allows us to use `if [[ "${{ matrix.key }}" == "true" ]]; then` in gha-ci/ci.yml
@@ -313,7 +313,7 @@ class JobCreator
         } else {
             $cmsMajor = BranchLogic::getCmsMajor($this->repoData, $this->branch, $this->getComposerJsonContent()) ?: MetaData::LOWEST_SUPPORTED_CMS_MAJOR;
             $dbsAdded = [];
-            $db = in_array($cmsMajor, ['4', '5']) ? DB_MYSQL_57 : DB_MARIADB;
+            $db = $cmsMajor == 5 ? DB_MYSQL_57 : DB_MARIADB;
             $matrix['include'][] = $this->createJob(0, [
                 'composer_args' => '--prefer-lowest',
                 'db' => $db,
@@ -321,43 +321,25 @@ class JobCreator
                 'phpunit_suite' => $suite,
             ]);
             $dbsAdded[] = $db;
-            if ($cmsMajor === '4') {
-                if (!$this->doRunPhpCoverage($run)) {
-                    // this same mysql pdo test is also created for the phpcoverage job, so only add it here if
-                    // not creating a phpcoverage job.
-                    // note: phpcoverage also runs unit tests
-                    $matrix['include'][] = $this->createJob(1, [
-                        'db' => DB_MYSQL_57_PDO,
-                        'phpunit' => true,
-                        'phpunit_suite' => $suite,
-                    ]);
-                }
-                $matrix['include'][] = $this->createJob(3, [
-                    'db' => DB_MYSQL_80,
+            // phpunit tests for cms 5 are run on php 8.1, 8.2 or 8.3 and mysql 8.0, 8.4 or mariadb
+            $phpToDB = $this->generatePhpToDBMap();
+            $lastPhp = null;
+            foreach ($phpToDB as $php => $db) {
+                $matrix['include'][] = $this->createJob($this->getIndexByPHPVersion($php), [
+                    'db' => $db,
                     'phpunit' => true,
                     'phpunit_suite' => $suite,
                 ]);
-            } else {
-                // phpunit tests for cms 5 are run on php 8.1, 8.2 or 8.3 and mysql 8.0, 8.4 or mariadb
-                $phpToDB = $this->generatePhpToDBMap();
-                $lastPhp = null;
-                foreach ($phpToDB as $php => $db) {
-                    $matrix['include'][] = $this->createJob($this->getIndexByPHPVersion($php), [
-                        'db' => $db,
-                        'phpunit' => true,
-                        'phpunit_suite' => $suite,
-                    ]);
-                    $dbsAdded[] = $db;
-                    $lastPhp = $php;
-                }
-                $dbNotAdded = array_diff($this->getDBs(), $dbsAdded);
-                foreach ($dbNotAdded as $db) {
-                    $matrix['include'][] = $this->createJob($this->getIndexByPHPVersion($lastPhp), [
-                        'db' => $db,
-                        'phpunit' => true,
-                        'phpunit_suite' => $suite,
-                    ]);
-                }
+                $dbsAdded[] = $db;
+                $lastPhp = $php;
+            }
+            $dbNotAdded = array_diff($this->getDBs(), $dbsAdded);
+            foreach ($dbNotAdded as $db) {
+                $matrix['include'][] = $this->createJob($this->getIndexByPHPVersion($lastPhp), [
+                    'db' => $db,
+                    'phpunit' => true,
+                    'phpunit_suite' => $suite,
+                ]);
             }
         }
         return $matrix;
@@ -405,7 +387,7 @@ class JobCreator
     private function getDBs()
     {
         $cmsMajor = BranchLogic::getCmsMajor($this->repoData, $this->branch, $this->getComposerJsonContent()) ?: MetaData::LOWEST_SUPPORTED_CMS_MAJOR;
-        if ($cmsMajor === '5') {
+        if ($cmsMajor == 5) {
             return [DB_MARIADB, DB_MYSQL_80, DB_MYSQL_84];
         }
         return [DB_MYSQL_80, DB_MYSQL_84, DB_MARIADB];
@@ -499,16 +481,9 @@ class JobCreator
         $cmsMajor = BranchLogic::getCmsMajor($this->repoData, $this->branch, $this->getComposerJsonContent()) ?: MetaData::LOWEST_SUPPORTED_CMS_MAJOR;
         // phpcoverage also runs unit tests
         if ($this->doRunPhpCoverage($run, $this->githubRepository)) {
-            if ($simpleMatrix || $composerInstall || $cmsMajor !== '4') {
-                $matrix['include'][] = $this->createJob(0, [
-                    'phpcoverage' => true
-                ]);
-            } else {
-                $matrix['include'][] = $this->createJob(2, [
-                    'db' => DB_MYSQL_57_PDO,
-                    'phpcoverage' => true
-                ]);
-            }
+            $matrix['include'][] = $this->createJob(0, [
+                'phpcoverage' => true
+            ]);
         }
         // endtoend / behat
         if ($run['endtoend'] && file_exists('behat.yml')) {
@@ -531,21 +506,11 @@ class JobCreator
             }
             sort($jobTags);
             foreach ($jobTags as $jobTag) {
-                $graphql3 = !$simpleMatrix && $cmsMajor == '4';
                 $job = $this->createJob(0, [
                     'endtoend' => true,
                     'endtoend_suite' => 'root',
                     'endtoend_tags' => $jobTag,
-                    'composer_require_extra' => $graphql3 ? 'silverstripe/graphql:^3' : '',
                 ]);
-                // use minimum version of 7.4 for endtoend because was having apt dependency issues
-                // in CI when using php 7.3:
-                // The following packages have unmet dependencies:
-                // libpcre2-dev : Depends: libpcre2-8-0 (= 10.39-3+ubuntu20.04.1+deb.sury.org+2) but
-                // 10.40-1+ubuntu20.04.1+deb.sury.org+1 is to be installed
-                if ($job['php'] == '7.3') {
-                    $job['php'] = '7.4';
-                }
                 $matrix['include'][] = $job;
                 if (!$simpleMatrix && !$composerInstall) {
                     $db = $cmsMajor == 5 ? DB_MYSQL_80 : DB_MYSQL_84;

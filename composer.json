@@ -1,6 +1,6 @@
 {
     "require": {
-        "silverstripe/supported-modules": "dev-main"
+        "silverstripe/supported-modules": "^2"
     },
     "require-dev": {
         "phpunit/phpunit": "^9.6"
