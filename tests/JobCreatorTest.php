@@ -290,6 +290,7 @@ class JobCreatorTest extends TestCase
         $highestMajorPlus1 = $this->offsetMajorVersion($highestMajor, 1);
         $phpLowestMajor = MetaData::PHP_VERSIONS_FOR_CMS_RELEASES[$lowestMajor];
         $phpHighestMajor = MetaData::PHP_VERSIONS_FOR_CMS_RELEASES[$highestMajor];
+        $startupThemeHighestMajor = $highestMajor - 5;
         $scenarios = [
             'behat without @job1/@job2 test - lowest major' => [
                 implode("\n", [
@@ -1087,6 +1088,49 @@ class JobCreatorTest extends TestCase
                         'doclinting' => 'false',
                         'needs_full_setup' => 'true',
                         'name' => $phpLowestMajor[2] . ' mysql84 phpunit all',
+                    ],
+                ]
+            ],
+            'test for repo with nothing to test' => [
+                implode("\n", [
+                    <<<EOT
+                    endtoend: false
+                    js: false
+                    phpcoverage: false
+                    phpcoverage_force_off: false
+                    phplinting: false
+                    phpunit: false
+                    doclinting: false
+                    simple_matrix: false
+                    composer_install: false
+                    github_repository: 'myaccount/startup-theme'
+                    github_my_ref: '$startupThemeHighestMajor'
+                    parent_branch: ''
+                    EOT
+                ]),
+                false,
+                false,
+                false,
+                [
+                    [
+                        'installer_version' => $highestMajor . '.x-dev',
+                        'php' => $phpHighestMajor[0],
+                        'db' => DB_MYSQL_80,
+                        'composer_require_extra' => '',
+                        'composer_args' => '',
+                        'name_suffix' => '',
+                        'phpunit' => 'false',
+                        'phpunit_suite' => 'all',
+                        'phplinting' => 'false',
+                        'phpcoverage' => 'false',
+                        'endtoend' => 'false',
+                        'endtoend_suite' => 'root',
+                        'endtoend_config' => '',
+                        'endtoend_tags' => '',
+                        'js' => 'false',
+                        'doclinting' => 'false',
+                        'needs_full_setup' => 'true',
+                        'name' => 'null tests',
                     ],
                 ]
             ],

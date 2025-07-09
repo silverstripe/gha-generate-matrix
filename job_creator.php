@@ -638,39 +638,7 @@ class JobCreator
             $matrix['include'][] = $this->createJob(0, $arr);
         }
 
-        // convert everything to strings and sanatise values
-        foreach ($matrix['include'] as $i => $job) {
-            foreach ($job as $key => $val) {
-                if ($val === true) {
-                    $val = 'true';
-                }
-                if ($val === false) {
-                    $val = 'false';
-                }
-                // all values must be strings
-                $val = (string) $val;
-                // remove any dodgy characters
-                $val = str_replace(["\f", "\r", "\n", "\t", "'", '"', '&', '|'], '', $val);
-                // only allow visible ascii chars - see [:print:] in the table at https://www.regular-expressions.info/posixbrackets.html#posixbrackets
-                $val = preg_replace('#[^\x20-\x7E]#', '', $val);
-                // limit name_suffix length and be strict as it is used in the artifact file name
-                if ($key === 'name_suffix' && strlen($val) > 20) {
-                    $val = preg_replace('#[^a-zA-Z0-9_\- ]#', '', $val);
-                    $val = substr($val, 0, 20);
-                }
-                // composer_require_extra is used in silverstripe/gha-ci `composer require`, so throw an
-                // exception if there are any dodgy characters
-                if ($key === 'composer_require_extra' && preg_match('#[^A-Za-z0-9\-\.\^\/~: ]#', $val)) {
-                    throw new InvalidArgumentException("Invalid composer_require_extra $val");
-                }
-                // ensure x.0 versions of PHP retain the minor version
-                if ($key === 'php' && preg_match('#^[1-9]$#', $val)) {
-                    $val = "$val.0";
-                }
-                // add value back to matrix
-                $matrix['include'][$i][$key] = $val;
-            }
-        }
+        $this->convertMatrixValuesToStrings($matrix);
 
         // job/artifacts names
         foreach ($matrix['include'] as $i => $job) {
@@ -712,6 +680,16 @@ class JobCreator
             $matrix['include'][$i]['name'] = implode(' ', $name);
         }
 
+        // If matrix is empty, create a null job. Use case for this is something like silverstripe/startup-theme
+        // which has nothing to test that we still want to trigger the tag-patch-release action from ci
+        if (empty($matrix['include']) && $dynamicMatrix) {
+            $matrix['include'][] = $this->createJob(0, [
+                'phpunit' => false,
+            ]);
+            $this->convertMatrixValuesToStrings($matrix);
+            $matrix['include'][0]['name'] = 'null tests';
+        }
+
         // ensure there are no duplicate jobs
         $uniqueSerializedJobs = array_unique(array_map('serialize', $matrix['include']));
         $matrix['include'] = array_values(array_map('unserialize', $uniqueSerializedJobs));
@@ -722,6 +700,45 @@ class JobCreator
         $json = preg_replace("#^ +#", "", $json);
         $json = str_replace("\n", '', $json);
         return trim($json);
+    }
+
+    /**
+     * Convert all values in the matrix to strings and sanitise them.
+     */
+    private function convertMatrixValuesToStrings(array &$matrix): void
+    {
+        foreach ($matrix['include'] as $i => $job) {
+            foreach ($job as $key => $val) {
+                if ($val === true) {
+                    $val = 'true';
+                }
+                if ($val === false) {
+                    $val = 'false';
+                }
+                // all values must be strings
+                $val = (string) $val;
+                // remove any dodgy characters
+                $val = str_replace(["\f", "\r", "\n", "\t", "'", '"', '&', '|'], '', $val);
+                // only allow visible ascii chars - see [:print:] in the table at https://www.regular-expressions.info/posixbrackets.html#posixbrackets
+                $val = preg_replace('#[^\x20-\x7E]#', '', $val);
+                // limit name_suffix length and be strict as it is used in the artifact file name
+                if ($key === 'name_suffix' && strlen($val) > 20) {
+                    $val = preg_replace('#[^a-zA-Z0-9_\- ]#', '', $val);
+                    $val = substr($val, 0, 20);
+                }
+                // composer_require_extra is used in silverstripe/gha-ci `composer require`, so throw an
+                // exception if there are any dodgy characters
+                if ($key === 'composer_require_extra' && preg_match('#[^A-Za-z0-9\-\.\^\/~: ]#', $val)) {
+                    throw new InvalidArgumentException("Invalid composer_require_extra $val");
+                }
+                // ensure x.0 versions of PHP retain the minor version
+                if ($key === 'php' && preg_match('#^[1-9]$#', $val)) {
+                    $val = "$val.0";
+                }
+                // add value back to matrix
+                $matrix['include'][$i][$key] = $val;
+            }
+        }
     }
 
     public function parseRepositoryMetadata()
