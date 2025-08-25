@@ -154,10 +154,9 @@ class JobCreatorTest extends TestCase
         $highestMajor = MetaData::HIGHEST_STABLE_CMS_MAJOR;
         $highestMajorPlus1 = $this->offsetMajorVersion($highestMajor, 1);
 
-        $versionsInConst = array_keys(INSTALLER_TO_REPO_MINOR_VERSIONS);
-        $latestVersionInConst = end($versionsInConst);
         $nextMinorLowestMajor = $lowestMajor . '.x-dev';
         $currentMinorLowestMajor = $this->getCurrentMinorInstallerVersion($lowestMajor) . '.x-dev';
+        $currentMinorHighestMajor = $this->getCurrentMinorInstallerVersion($highestMajor) . '.x-dev';
         $scenarios = [
             // no-installer repo
             'recipe-cms1' => ['myaccount/recipe-cms', '4', ''],
@@ -199,7 +198,7 @@ class JobCreatorTest extends TestCase
             'tagfield8' => [
                 'myaccount/silverstripe-tagfield',
                 $this->offsetMajorVersion($highestMajor, -2) . '.0',
-                $latestVersionInConst . '.x-dev',
+                $highestMajor . '.0.x-dev',
                 [['name' => '99']],
                 ['silverstripe/framework' => '^99']
             ],
@@ -2117,6 +2116,7 @@ class JobCreatorTest extends TestCase
         $lowestMajor = MetaData::LOWEST_SUPPORTED_CMS_MAJOR;
         $highestMajor = MetaData::HIGHEST_STABLE_CMS_MAJOR;
         $highestMajorPlus1 = $this->offsetMajorVersion($highestMajor, 1);
+        $currentMinorHighestMajor = $this->getCurrentMinorInstallerVersion($highestMajor);
         $scenarios = [
             // priority given to branch name
             ['myaccount/silverstripe-framework', $lowestMajor, [], 'silverstripe-module', $lowestMajor . '.x-dev'],
@@ -2138,16 +2138,16 @@ class JobCreatorTest extends TestCase
             // highest major
             ['myaccount/silverstripe-admin', 'mybranch', ['silverstripe/framework' => $highestMajor . '.x-dev'], 'silverstripe-module', $highestMajor . '.x-dev'],
             ['myaccount/silverstripe-admin', 'mybranch', ['silverstripe/framework' => $highestMajor . '.0.x-dev'], 'silverstripe-vendormodule', $highestMajor . '.0.x-dev'],
-            ['myaccount/silverstripe-admin', 'mybranch', ['silverstripe/framework' => '^' . $highestMajor], 'silverstripe-theme', $highestMajor . '.0.x-dev'],
-            ['myaccount/silverstripe-somemodule', 'mybranch', ['silverstripe/cms' => '^' . $highestMajor], 'silverstripe-recipe', $highestMajor . '.0.x-dev'],
-            ['myaccount/silverstripe-somemodule', 'mybranch', ['silverstripe/admin' => '^' . $this->offsetMajorVersion($highestMajor, -3)], 'silverstripe-vendormodule', $highestMajor . '.0.x-dev'],
+            ['myaccount/silverstripe-admin', 'mybranch', ['silverstripe/framework' => '^' . $highestMajor], 'silverstripe-theme', $currentMinorHighestMajor . '.x-dev'],
+            ['myaccount/silverstripe-somemodule', 'mybranch', ['silverstripe/cms' => '^' . $highestMajor], 'silverstripe-recipe', $currentMinorHighestMajor . '.x-dev'],
+            ['myaccount/silverstripe-somemodule', 'mybranch', ['silverstripe/admin' => '^' . $this->offsetMajorVersion($highestMajor, -3)], 'silverstripe-vendormodule', $currentMinorHighestMajor . '.x-dev'],
             ['myaccount/silverstripe-somemodule', '4', ['silverstripe/framework' => '^' . $highestMajor], 'silverstripe-vendormodule', $highestMajor . '.x-dev'],
             ['myaccount/silverstripe-somemodule', '4', ['silverstripe/framework' => '^' . $highestMajor], 'package', ''],
             ['myaccount/silverstripe-somemodule', '4', ['silverstripe/framework' => '^' . $highestMajor], '', ''],
             ['myaccount/silverstripe-somemodule', '4', [], '', ''],
             // recipe-plugin and vendor-plugin do not override framework
-            ['myaccount/silverstripe-admin', 'mybranch', ['silverstripe/recipe-plugin' => '^' . $this->offsetMajorVersion($lowestMajor, -3), 'silverstripe/framework' => '^' . $highestMajor], 'silverstripe-vendormodule', $highestMajor . '.0.x-dev'],
-            ['myaccount/silverstripe-admin', 'mybranch', ['silverstripe/vendor-plugin' => '^' . $this->offsetMajorVersion($lowestMajor, -3), 'silverstripe/framework' => '^' . $highestMajor], 'silverstripe-vendormodule', $highestMajor . '.0.x-dev'],
+            ['myaccount/silverstripe-admin', 'mybranch', ['silverstripe/recipe-plugin' => '^' . $this->offsetMajorVersion($lowestMajor, -3), 'silverstripe/framework' => '^' . $highestMajor], 'silverstripe-vendormodule', $currentMinorHighestMajor . '.x-dev'],
+            ['myaccount/silverstripe-admin', 'mybranch', ['silverstripe/vendor-plugin' => '^' . $this->offsetMajorVersion($lowestMajor, -3), 'silverstripe/framework' => '^' . $highestMajor], 'silverstripe-vendormodule', $currentMinorHighestMajor . '.x-dev'],
         ];
 
         // Make sure we can deal with pre-release majors
