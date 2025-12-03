@@ -460,7 +460,7 @@ class JobCreatorTest extends TestCase
                     ],
                     [
                         'installer_version' => $highestMajor . '.x-dev',
-                        'php' => $phpHighestMajor[0],
+                        'php' => $phpHighestMajor[1],
                         'db' => DB_MYSQL_80,
                         'composer_require_extra' => '',
                         'composer_args' => '',
@@ -476,11 +476,11 @@ class JobCreatorTest extends TestCase
                         'js' => 'false',
                         'doclinting' => 'false',
                         'needs_full_setup' => 'true',
-                        'name' => $phpHighestMajor[0]. ' mysql80 phpunit all',
+                        'name' => $phpHighestMajor[1]. ' mysql80 phpunit all',
                     ],
                     [
                         'installer_version' => $highestMajor . '.x-dev',
-                        'php' => $phpHighestMajor[1],
+                        'php' => $phpHighestMajor[2],
                         'db' => DB_MYSQL_84,
                         'composer_require_extra' => '',
                         'composer_args' => '',
@@ -496,7 +496,7 @@ class JobCreatorTest extends TestCase
                         'js' => 'false',
                         'doclinting' => 'false',
                         'needs_full_setup' => 'true',
-                        'name' => $phpHighestMajor[1]. ' mysql84 phpunit all',
+                        'name' => $phpHighestMajor[2]. ' mysql84 phpunit all',
                     ],
                     [
                         'installer_version' => $highestMajor . '.x-dev',
@@ -520,7 +520,7 @@ class JobCreatorTest extends TestCase
                     ],
                     [
                         'installer_version' => $highestMajor . '.x-dev',
-                        'php' => $phpHighestMajor[1],
+                        'php' => $phpHighestMajor[2],
                         'db' => DB_MYSQL_84,
                         'composer_require_extra' => '',
                         'composer_args' => '',
@@ -536,7 +536,7 @@ class JobCreatorTest extends TestCase
                         'js' => 'false',
                         'doclinting' => 'false',
                         'needs_full_setup' => 'true',
-                        'name' => $phpHighestMajor[1]. ' mysql84 endtoend root',
+                        'name' => $phpHighestMajor[2]. ' mysql84 endtoend root',
                     ],
                 ]
             ],
@@ -859,7 +859,7 @@ class JobCreatorTest extends TestCase
                     ],
                     [
                         'installer_version' => $highestMajor . '.x-dev',
-                        'php' => $phpHighestMajor[0],
+                        'php' => $phpHighestMajor[1],
                         'db' => DB_MYSQL_80,
                         'composer_require_extra' => '',
                         'composer_args' => '',
@@ -875,11 +875,11 @@ class JobCreatorTest extends TestCase
                         'js' => 'false',
                         'doclinting' => 'false',
                         'needs_full_setup' => 'true',
-                        'name' => $phpHighestMajor[0]. ' mysql80 phpunit all',
+                        'name' => $phpHighestMajor[1]. ' mysql80 phpunit all',
                     ],
                     [
                         'installer_version' => $highestMajor . '.x-dev',
-                        'php' => $phpHighestMajor[1],
+                        'php' => $phpHighestMajor[2],
                         'db' => DB_MYSQL_84,
                         'composer_require_extra' => '',
                         'composer_args' => '',
@@ -895,7 +895,7 @@ class JobCreatorTest extends TestCase
                         'js' => 'false',
                         'doclinting' => 'false',
                         'needs_full_setup' => 'true',
-                        'name' => $phpHighestMajor[1]. ' mysql84 phpunit all',
+                        'name' => $phpHighestMajor[2]. ' mysql84 phpunit all',
                     ],
                 ]
             ],
@@ -1598,7 +1598,7 @@ class JobCreatorTest extends TestCase
                     ],
                     [
                         'installer_version' => '',
-                        'php' => $phpHighestMajor[0],
+                        'php' => $phpHighestMajor[1],
                         'db' => DB_MYSQL_80,
                         'composer_require_extra' => '',
                         'composer_args' => '',
@@ -1614,11 +1614,11 @@ class JobCreatorTest extends TestCase
                         'js' => 'false',
                         'doclinting' => 'false',
                         'needs_full_setup' => 'false',
-                        'name' => $phpHighestMajor[0] . ' mysql80 phpunit all',
+                        'name' => $phpHighestMajor[1] . ' mysql80 phpunit all',
                     ],
                     [
                         'installer_version' => '',
-                        'php' => $phpHighestMajor[1],
+                        'php' => $phpHighestMajor[2],
                         'db' => DB_MYSQL_84,
                         'composer_require_extra' => '',
                         'composer_args' => '',
@@ -1634,7 +1634,7 @@ class JobCreatorTest extends TestCase
                         'js' => 'false',
                         'doclinting' => 'false',
                         'needs_full_setup' => 'false',
-                        'name' => $phpHighestMajor[1] . ' mysql84 phpunit all',
+                        'name' => $phpHighestMajor[2] . ' mysql84 phpunit all',
                     ],
                 ],
             ],
@@ -2273,8 +2273,8 @@ class JobCreatorTest extends TestCase
                 'silverstripe-vendormodule',
                 [
                     $phpHighestMajor[0] . ' prf-low mariadb phpunit all',
-                    $phpHighestMajor[0] . ' mysql80 phpunit all',
-                    $phpHighestMajor[1] . ' mysql84 phpunit all',
+                    $phpHighestMajor[1] . ' mysql80 phpunit all',
+                    $phpHighestMajor[2] . ' mysql84 phpunit all',
                 ]
             ],
             'composerupgrade_definedphpversion_framework lowest' => [
@@ -2308,8 +2308,8 @@ class JobCreatorTest extends TestCase
                 'silverstripe-theme',
                 [
                     $phpHighestMajor[0] . ' prf-low mariadb phpunit all',
-                    $phpHighestMajor[0] . ' mysql80 phpunit all',
-                    $phpHighestMajor[1] . ' mysql84 phpunit all',
+                    $phpHighestMajor[1] . ' mysql80 phpunit all',
+                    $phpHighestMajor[2] . ' mysql84 phpunit all',
                 ]
             ],
             'composerupgrade_nophpversion_framework lowest with minor' => [
@@ -2476,8 +2476,8 @@ class JobCreatorTest extends TestCase
                 'exception' => false,
                 'expected' => [
                     $phpHighestMajor[0] . ' prf-low mariadb phpunit all',
-                    $phpHighestMajor[0] . ' mysql80 phpunit all',
-                    $phpHighestMajor[1] . ' mysql84 phpunit all',
+                    $phpHighestMajor[1] . ' mysql80 phpunit all',
+                    $phpHighestMajor[2] . ' mysql84 phpunit all',
                 ],
             ],
             'none' => [
