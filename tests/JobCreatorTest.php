@@ -113,6 +113,69 @@ class JobCreatorTest extends TestCase
         }
     }
 
+    /**
+     * Note that the scenarios rely on the versions in INSTALLER_TO_REPO_MINOR_VERSIONS, which
+     * change as modules get new minor branches
+     */
+    public function provideYarn4MinimumInstallerVersion(): array
+    {
+        $minVersion = MIN_INSTALLER_VERSION_FOR_YARN_4;
+        return [
+            // silverstripe-realme 6.0 is the repo version for several installer minors, the lowest
+            // of which is used, so yarn 4 pushes it up to the minimum
+            'below minimum with yarn 4' => [
+                'myaccount/silverstripe-realme', '6.0', 'yarn@4.18.0+sha512.abc123', "$minVersion.x-dev"
+            ],
+            'below minimum without package.json' => [
+                'myaccount/silverstripe-realme', '6.0', null, '6.0.x-dev'
+            ],
+            'below minimum with yarn 1' => [
+                'myaccount/silverstripe-realme', '6.0', null, '6.0.x-dev', true
+            ],
+            'at minimum with yarn 4' => [
+                'myaccount/silverstripe-linkfield', '5.2', 'yarn@4.18.0+sha512.abc123', "$minVersion.x-dev"
+            ],
+            // A different major is a different CMS release line, so it is left alone
+            'lower major with yarn 4' => [
+                'myaccount/silverstripe-mfa', '5.4', 'yarn@4.18.0+sha512.abc123', '5.4.x-dev'
+            ],
+        ];
+    }
+
+    /**
+     * @dataProvider provideYarn4MinimumInstallerVersion
+     */
+    public function testYarn4MinimumInstallerVersion(
+        string $githubRepository,
+        string $branch,
+        ?string $packageManager,
+        string $expected,
+        bool $writePackageJson = false
+    ): void {
+        try {
+            if ($packageManager !== null || $writePackageJson) {
+                $packageJson = new stdClass();
+                if ($packageManager !== null) {
+                    $packageJson->packageManager = $packageManager;
+                }
+                file_put_contents('__package.json', json_encode($packageJson, JSON_UNESCAPED_SLASHES));
+            }
+            $creator = new JobCreator();
+            $creator->composerJsonPath = '__composer.json';
+            $creator->packageJsonPath = '__package.json';
+            $creator->githubRepository = $githubRepository;
+            $creator->repoName = explode('/', $githubRepository)[1];
+            $creator->branch = $creator->getCleanedBranch($branch);
+            $creator->parseRepositoryMetadata();
+            $actual = $creator->getInstallerVersion(json_encode($this->getInstallerBranchesJson()));
+            $this->assertSame($expected, $actual);
+        } finally {
+            if (file_exists('__package.json')) {
+                unlink('__package.json');
+            }
+        }
+    }
+
     private function getInstallerBranchesJson(): array
     {
         $lowestMajor = MetaData::LOWEST_SUPPORTED_CMS_MAJOR;

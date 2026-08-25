@@ -7,6 +7,8 @@ class JobCreator
 {
     public string $composerJsonPath = 'composer.json';
 
+    public string $packageJsonPath = 'package.json';
+
     public string $branch = '';
 
     public string $githubRepository = '';
@@ -31,6 +33,19 @@ class JobCreator
      * Get the correct version of silverstripe/installer to include for the given repository and branch
      */
     public function getInstallerVersion(
+        // the following is only used for unit testing
+        string $installerBranchesJson = ''
+    ): string
+    {
+        $installerVersion = $this->deriveInstallerVersion($installerBranchesJson);
+        return $this->applyYarn4MinimumInstallerVersion($installerVersion);
+    }
+
+    /**
+     * Work out the version of silverstripe/installer from the branch, ignoring any minimum
+     * version required by the tooling the repository uses
+     */
+    private function deriveInstallerVersion(
         // the following is only used for unit testing
         string $installerBranchesJson = ''
     ): string
@@ -780,6 +795,41 @@ class JobCreator
             'silverstripe-theme',
         ];
         return isset($json->type) && in_array($json->type, $silverstripeRepoTypes);
+    }
+
+    /**
+     * Modules using yarn 4 need a version of silverstripe/admin that also uses yarn 4, which is
+     * only available from MIN_INSTALLER_VERSION_FOR_YARN_4 onwards. Older versions of installer
+     * pull in an admin with a yarn 1 lockfile, which yarn 4 refuses to install with --immutable.
+     */
+    private function applyYarn4MinimumInstallerVersion(string $installerVersion): string
+    {
+        // Anything that isn't a x.y.x-dev version is either not using installer at all, or is a
+        // next-minor version e.g. 6.x-dev, which is always ahead of the minimum
+        if (!preg_match('#^([0-9]+)\.([0-9]+)\.x-dev$#', $installerVersion, $matches)) {
+            return $installerVersion;
+        }
+        if (!$this->usesYarn4()) {
+            return $installerVersion;
+        }
+        list($minMajor, $minMinor) = explode('.', MIN_INSTALLER_VERSION_FOR_YARN_4);
+        // Only bump within the same major - a lower major is a different CMS release line
+        if ($matches[1] !== $minMajor || (int) $matches[2] >= (int) $minMinor) {
+            return $installerVersion;
+        }
+        return MIN_INSTALLER_VERSION_FOR_YARN_4 . '.x-dev';
+    }
+
+    private function usesYarn4(): bool
+    {
+        if (!file_exists($this->packageJsonPath)) {
+            return false;
+        }
+        $json = json_decode(file_get_contents($this->packageJsonPath));
+        if (!is_object($json) || !isset($json->packageManager)) {
+            return false;
+        }
+        return (bool) preg_match('#^yarn@4\.#', $json->packageManager);
     }
 
     private function getComposerJsonContent(): ?stdClass

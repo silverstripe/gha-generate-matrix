@@ -17,6 +17,12 @@ const FORCE_INSTALLER_REPOS = [
     'silverstripe-behat-extension',
 ];
 
+/**
+ * The lowest version of silverstripe/installer that ships a version of silverstripe/admin using yarn 4.
+ * Repositories that use yarn 4 themselves are tested against at least this version of installer.
+ */
+const MIN_INSTALLER_VERSION_FOR_YARN_4 = '6.2';
+
 // use hardcoded.php to bulk update update this after creating a .cow.pat.json
 // for multiple versions, use an array e.g. silverstripe-mymodule => ['2.3', '2.4']
 const INSTALLER_TO_REPO_MINOR_VERSIONS = [
