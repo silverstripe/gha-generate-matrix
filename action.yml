@@ -102,21 +102,28 @@ runs:
         extensions: yaml
         tools: composer:v2
 
-    # This is shared between runs, not just jobs. It means the first time the repo runs the job it'll
-    # need to download requirements for the first time, after that it will be plenty quick
+    # A cache entry is never overwritten, so the key changes each week to keep the cache current.
+    - name: Get composer cache key
+      id: composer-cache-key
+      shell: bash
+      run: |
+        echo "key=gha-generate-matrix-composer-$(date -u +%G-%V)" >> $GITHUB_OUTPUT
+
     # https://docs.github.com/en/actions/advanced-guides/caching-dependencies-to-speed-up-workflows
     - name: Enable shared composer cache
       uses: actions/cache@0c907a75c2c80ebcb7f088228285e798b750cf8f # @v4.2.1
       with:
         path: ~/.cache/composer
-        key: shared-composer-cache
+        key: ${{ steps.composer-cache-key.outputs.key }}
+        restore-keys: |
+          gha-generate-matrix-composer-
 
     # Install composer dependencies for this action itself
     - name: Composer
       shell: bash
       run: |
         cd ${{ github.action_path }}
-        composer install
+        composer install --no-dev
         cd -
 
     - name: Create __inputs.yml
